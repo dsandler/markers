@@ -4,11 +4,15 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
@@ -17,15 +21,24 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.media.MediaScannerConnection;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.IOException;
+import java.util.Date;
 
 public class Slate extends View {
     private static final boolean DEBUG = true;
     private static final String TAG = "Slate";
 
     private static final boolean DEBUG_INVALIDATE_ALL = false;
-    private static final boolean DEBUG_CURVES = false;
+
+    public static final int FLAG_DEBUG_STROKES = 1;
 
     private static final boolean BEZIER = true;
+    private static final int FIXED_DIMENSION = 0; // 1024;
 
     private static final float INVALIDATE_PADDING = 4.0f;
 
@@ -40,6 +53,8 @@ public class Slate extends View {
     private static final float TOUCH_SIZE_RANGE_MIN = 1.0f;
     private static final float TOUCH_SIZE_RANGE_MAX = 50.0f;
 
+    private int mDebugFlags = 0;
+
     private Bitmap mBitmap;
     private Canvas mCanvas;
     private final RectF mRect = new RectF();
@@ -49,7 +64,7 @@ public class Slate extends View {
     private float mTanX = 0, mTanY = 0;
 
     public Slate(Context c, AttributeSet as) {
-        super(c);
+        super(c, as);
         setFocusable(true);
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
@@ -60,9 +75,7 @@ public class Slate extends View {
         mStrokePaint.setStyle(Paint.Style.STROKE);
         mStrokePaint.setStrokeCap(Paint.Cap.ROUND);
 
-        if (DEBUG_CURVES) {
-            mStrokePaint.setARGB(128, 255,255,255);
-            mPaint.setARGB(128, 255,255,255);
+        if (true) {
             mDebugPaints[0] = new Paint();
             mDebugPaints[0].setStyle(Paint.Style.STROKE);
             mDebugPaints[0].setStrokeWidth(2.0f);
@@ -80,6 +93,57 @@ public class Slate extends View {
         }
     }
 
+    public int getDebugFlags() { return mDebugFlags; }
+    public void setDebugFlags(int f) {
+        mDebugFlags = f;
+
+        if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
+            mStrokePaint.setARGB(128, 255,255,255);
+            mPaint.setARGB(128, 255,255,255);
+        } else {
+            mStrokePaint.setARGB(255, 255,255,255);
+            mPaint.setARGB(255,255,255,255);
+        }
+    }
+
+    public void save() {
+        try {
+            File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+            d = new File(d, "Slates");
+            if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
+            File file = new File(d, System.currentTimeMillis() + ".png");
+            Log.d(TAG, "save: saving " + file);
+            OutputStream os = new FileOutputStream(file);
+            mBitmap.compress(Bitmap.CompressFormat.PNG, 0, os);
+            os.close();
+            MediaScannerConnection.scanFile(getContext(),
+                    new String[] { file.toString() }, null, null
+                    );
+            
+        } catch (IOException e) {
+            Log.d(TAG, "save: error: " + e);
+        }
+    }
+
+    public void invert() {
+//        mCanvas.drawColor(0xFFFFFFFF, PorterDuff.Mode.XOR);
+        Log.d(TAG, "invert");
+        Paint p = new Paint(); 
+        float[] mx = { 
+             -1.0f,  0.0f,  0.0f,  0.0f,  1.0f, 
+              0.0f, -1.0f,  0.0f,  0.0f,  1.0f, 
+              0.0f,  0.0f, -1.0f,  0.0f,  1.0f, 
+              0.0f,  0.0f,  0.0f,  1.0f,  0.0f 
+        }; 
+        ColorMatrix cm = new ColorMatrix(mx); 
+        p.setColorFilter(new ColorMatrixColorFilter(cm)); 
+
+//        mCanvas.drawRect(new Rect(0, 0, mCanvas.getWidth(), mCanvas.getHeight()), p);
+        mCanvas.drawBitmap(mBitmap, 0, 0, p);
+
+        invalidate();
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
@@ -89,18 +153,23 @@ public class Slate extends View {
             return;
         }
 
-        w = getWidth();
-        h = getHeight();
-
-        if (curW < w) curW = w;
-        if (curH < h) curH = h;
+        if (FIXED_DIMENSION > 0) {
+            curW = curH = FIXED_DIMENSION;
+        } else {
+            if (curW < w) curW = w;
+            if (curH < h) curH = h;
+        }
 
         Bitmap newBitmap = Bitmap.createBitmap(curW, curH,
                 Bitmap.Config.RGB_565);
-        Log.d(TAG, "created bitmap " + curW + "x" + curH);
+//                Bitmap.Config.ARGB_8888);
+        Log.d(TAG, "new size: " + w + "x" + h);
+        Log.d(TAG, "old bitmap: " + mBitmap);
+        Log.d(TAG, "creaeted bitmap " + curW + "x" + curH + ": " + newBitmap);
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
         if (mBitmap != null) {
+            // copy the old bitmap in? doesn't seem to work
             newCanvas.drawBitmap(mBitmap, 0, 0, null);
         }
         mBitmap = newBitmap;
@@ -200,7 +269,7 @@ public class Slate extends View {
                 mTanX = x - controlX;
                 mTanY = y - controlY;
 
-                if (DEBUG_CURVES) {
+                if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
 //                    mCanvas.drawLine(mLastX, mLastY, controlX, controlY, mDebugPaints[0]);
 //                    mCanvas.drawLine(controlX, controlY, x, y, mDebugPaints[0]);
                     mCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);

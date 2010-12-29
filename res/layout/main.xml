@@ -1,12 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     >
+        
     <com.android.slate.Slate
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
         android:id="@+id/slate"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         />
-</FrameLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="30dip"
+        android:orientation="horizontal"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        >
+        <Button
+            android:id="@+id/clear"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="clear"
+            android:onClick="clickClear"
+            android:textSize="12sp"
+            android:textColor="#FFFFFFFF"
+            android:background="@null"
+            android:padding="4dip"
+            android:layout_marginRight="6dip"
+            />
+        <Button
+            android:id="@+id/invert"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="invert"
+            android:onClick="clickInvert"
+            android:textSize="12sp"
+            android:textColor="#FFFFFFFF"
+            android:background="@null"
+            android:padding="4dip"
+            android:layout_marginRight="6dip"
+            />
+        <Button
+            android:id="@+id/debug"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="debug"
+            android:onClick="clickDebug"
+            android:textSize="12sp"
+            android:textColor="#FFFFFFFF"
+            android:background="@null"
+            android:padding="4dip"
+            android:layout_marginRight="6dip"
+            />
+        <Button
+            android:id="@+id/save"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="save"
+            android:onClick="clickSave"
+            android:textSize="12sp"
+            android:textColor="#FFFFFFFF"
+            android:background="@null"
+            android:padding="4dip"
+            android:layout_marginRight="6dip"
+            />
+    </LinearLayout>
+</RelativeLayout>
 
