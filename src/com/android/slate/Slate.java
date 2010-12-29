@@ -87,8 +87,7 @@ public class Slate extends View {
 
     public void clear() {
         if (mCanvas != null) {
-            mPaint.setARGB(0xff, 0, 0, 0);
-            mCanvas.drawPaint(mPaint);
+            mCanvas.drawColor(0xFF000000);
             invalidate();
         }
     }
