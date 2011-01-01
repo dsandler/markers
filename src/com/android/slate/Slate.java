@@ -50,6 +50,8 @@ public class Slate extends View {
 
     private float mRadius = 8.0f;
 
+    private int mPenColor;
+
     private static final float TOUCH_SIZE_RANGE_MIN = 1.0f;
     private static final float TOUCH_SIZE_RANGE_MAX = 50.0f;
 
@@ -74,6 +76,7 @@ public class Slate extends View {
         mStrokePaint = new Paint(mPaint);
         mStrokePaint.setStyle(Paint.Style.STROKE);
         mStrokePaint.setStrokeCap(Paint.Cap.ROUND);
+        setPenColor(0xFFFFFFFF);
 
         if (true) {
             mDebugPaints[0] = new Paint();
@@ -100,8 +103,7 @@ public class Slate extends View {
             mStrokePaint.setARGB(128, 255,255,255);
             mPaint.setARGB(128, 255,255,255);
         } else {
-            mStrokePaint.setARGB(255, 255,255,255);
-            mPaint.setARGB(255,255,255,255);
+            setPenColor(mPenColor);
         }
     }
 
@@ -141,6 +143,12 @@ public class Slate extends View {
         mCanvas.drawBitmap(mBitmap, 0, 0, p);
 
         invalidate();
+    }
+
+    public void setPenColor(int color) {
+        mPenColor = color;
+        mPaint.setColor(color);
+        mStrokePaint.setColor(color);
     }
 
     @Override

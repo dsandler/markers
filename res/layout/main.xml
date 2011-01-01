@@ -17,6 +17,61 @@
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         >
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:background="#80606060"
+            android:layout_marginRight="6dip"
+            android:layout_marginLeft="6dip"
+            >
+            <Button
+                android:id="@+id/black"
+                android:layout_width="20dip"
+                android:layout_height="20dip"
+                android:onClick="clickColor"
+                android:background="#FF000000"
+                android:layout_gravity="center"
+                android:layout_marginRight="6dip"
+                android:layout_marginLeft="6dip"
+                />
+            <Button
+                android:id="@+id/white"
+                android:layout_width="20dip"
+                android:layout_height="20dip"
+                android:onClick="clickColor"
+                android:background="#FFFFFFFF"
+                android:layout_gravity="center"
+                android:layout_marginRight="6dip"
+                />
+            <Button
+                android:id="@+id/red"
+                android:layout_width="20dip"
+                android:layout_height="20dip"
+                android:onClick="clickColor"
+                android:background="#FFFF0000"
+                android:layout_gravity="center"
+                android:layout_marginRight="6dip"
+                />
+            <Button
+                android:id="@+id/green"
+                android:layout_width="20dip"
+                android:layout_height="20dip"
+                android:onClick="clickColor"
+                android:background="#FF00FF00"
+                android:layout_gravity="center"
+                android:layout_marginRight="6dip"
+                />
+            <Button
+                android:id="@+id/blue"
+                android:layout_width="20dip"
+                android:layout_height="20dip"
+                android:onClick="clickColor"
+                android:background="#FF0000FF"
+                android:layout_gravity="center"
+                android:layout_marginRight="6dip"
+                />
+        </LinearLayout>
         <Button
             android:id="@+id/clear"
             android:layout_width="wrap_content"
@@ -29,6 +84,7 @@
             android:padding="4dip"
             android:layout_marginRight="6dip"
             />
+        <!--
         <Button
             android:id="@+id/invert"
             android:layout_width="wrap_content"
@@ -41,6 +97,7 @@
             android:padding="4dip"
             android:layout_marginRight="6dip"
             />
+        -->
         <Button
             android:id="@+id/debug"
             android:layout_width="wrap_content"
@@ -63,7 +120,6 @@
             android:textColor="#FFFFFFFF"
             android:background="#80606060"
             android:padding="4dip"
-            android:layout_marginRight="6dip"
             />
     </LinearLayout>
 </RelativeLayout>
