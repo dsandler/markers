@@ -8,6 +8,7 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.PorterDuff;
@@ -37,13 +38,16 @@ public class Slate extends View {
 
     public static final int FLAG_DEBUG_STROKES = 1;
 
-    private static final boolean BEZIER = true;
+    private static final boolean BEZIER = false;
+    private static final boolean WALK_PATHS = true;
+    private static final float WALK_STEP_PX = 3.0f;
+
     private static final int FIXED_DIMENSION = 0; // 1024;
 
     private static final float INVALIDATE_PADDING = 4.0f;
 
     private float mPressureVariation = 0.0f;
-    private float mPressureExponent = 1.0f;
+    private float mPressureExponent = 2.0f;
 
     private float mSizeVariation = 1.0f;
     private float mSizeExponent = 2.0f;
@@ -61,9 +65,12 @@ public class Slate extends View {
     private Canvas mCanvas;
     private final RectF mRect = new RectF();
     private final Paint mPaint, mStrokePaint;
-    private final Paint mDebugPaints[] = new Paint[2];
-    private float mLastX = 0, mLastY = 0, mLastR = -1;
-    private float mTanX = 0, mTanY = 0;
+    private final Paint mDebugPaints[] = new Paint[3];
+    private float mLastX = 0, mLastY = 0, mLastLen = 0, mLastR = -1;
+    private float mTan[] = new float[2];
+
+    private Path mWorkPath = new Path();
+    private PathMeasure mWorkPathMeasure = new PathMeasure();
 
     public Slate(Context c, AttributeSet as) {
         super(c, as);
@@ -84,7 +91,9 @@ public class Slate extends View {
             mDebugPaints[0].setStrokeWidth(2.0f);
             mDebugPaints[0].setARGB(255, 0, 255, 255);
             mDebugPaints[1] = new Paint(mDebugPaints[0]);
-            mDebugPaints[1].setARGB(255, 0, 0, 255);
+            mDebugPaints[1].setARGB(255, 255, 0, 128);
+            mDebugPaints[2] = new Paint(mDebugPaints[0]);
+            mDebugPaints[2].setARGB(255, 0, 255, 0);
         }
     }
 
@@ -102,8 +111,10 @@ public class Slate extends View {
         if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
             mStrokePaint.setARGB(128, 255,255,255);
             mPaint.setARGB(128, 255,255,255);
+            mPaint.setStyle(Paint.Style.STROKE);
         } else {
             setPenColor(mPenColor);
+            mPaint.setStyle(Paint.Style.FILL);
         }
     }
 
@@ -215,11 +226,15 @@ public class Slate extends View {
 
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             // reset
-            mLastX = mLastY = mTanX = mTanY = 0;
+            mLastX = mLastY = mTan[0] = mTan[1] = 0;
             
             mLastR = -1;
         }
         return true;
+    }
+
+    private float lerp(float a, float b, float f) {
+        return a + f * (b - a);
     }
 
     private void drawPoint(float x, float y, float pressure, float width) {
@@ -239,7 +254,7 @@ public class Slate extends View {
                 + (float) (Math.pow(widthNorm, mSizeExponent) - 0.5f) * mSizeVariation
                 + (float) (Math.pow(pressureNorm, mPressureExponent) - 0.5f) * mPressureVariation
             );
-        Log.d(TAG, String.format("(%g, %g): wnorm=%g rad=%g", x, y, widthNorm, r));
+        Log.d(TAG, String.format("(%g, %g): pnorm=%g wnorm=%g rad=%g", x, y, pressureNorm, widthNorm, r));
 
         if (mBitmap != null) {
             mCanvas.drawCircle(x, y, r, mPaint);
@@ -251,36 +266,66 @@ public class Slate extends View {
 
             if (mLastR >= 0) {
                 // connect the dots, la-la-la
-                // TODO: use a trapezoid from circle tangents
-                mStrokePaint.setStrokeWidth(r+mLastR); // average x 2
-//                mCanvas.drawLine(mLastX, mLastY, x, y, mStrokePaint);
                 
-                Path p = new Path();
+                Path p = mWorkPath;
+                p.reset();
                 p.moveTo(mLastX, mLastY);
 
-                float controlX = mLastX + mTanX*0.5f;
-                float controlY = mLastY + mTanY*0.5f;
+                float controlX = mLastX + mTan[0]*0.5f;
+                float controlY = mLastY + mTan[1]*0.5f;
 
-                if (BEZIER && (mTanX != 0 || mTanY != 0)) {
+                if (BEZIER && (mTan[0] != 0 || mTan[1] != 0)) {
                     p.quadTo(controlX, controlY, x, y);
                 } else {
                     p.lineTo(x, y);
                 }
-                mCanvas.drawPath(p, mStrokePaint);
-    
-                mRect.union((mLastX - mLastR - INVALIDATE_PADDING),
-                            (mLastY - mLastR - INVALIDATE_PADDING));
-                mRect.union((mLastX + mLastR + INVALIDATE_PADDING),
-                            (mLastY + mLastR + INVALIDATE_PADDING));
 
-                mTanX = x - controlX;
-                mTanY = y - controlY;
+                if (WALK_PATHS) {
+                    PathMeasure pm = mWorkPathMeasure;
+                    pm.setPath(p, false);
+                    mLastLen = pm.getLength();
+                    float d = 0;
+                    float posOut[] = new float[2];
+                    float ri;
+                    while (true) {
+                        if (d > mLastLen) {
+                            d = mLastLen;
+                        }
+                        pm.getPosTan(d, posOut, mTan);
+                        // denormalize
+                        mTan[0] *= mLastLen; mTan[1] *= mLastLen;
+
+                        ri = lerp(mLastR, r, d / mLastLen);
+                        mCanvas.drawCircle(posOut[0], posOut[1], ri, mPaint);
+
+                        mRect.union(posOut[0] - ri, posOut[1] - ri, posOut[0] + ri, posOut[1] + ri);
+                        
+                        if (d == mLastLen) break;
+                        d += WALK_STEP_PX;
+                    }
+
+                } else { // STROKE_PATHS
+                    // TODO: use a trapezoid from circle tangents
+                    mStrokePaint.setStrokeWidth(r+mLastR); // average x 2
+    //                mCanvas.drawLine(mLastX, mLastY, x, y, mStrokePaint);
+
+                    mCanvas.drawPath(p, mStrokePaint);
+
+                    mTan[0] = x - controlX;
+                    mTan[1] = y - controlY;
+    
+                    mRect.union((mLastX - mLastR - INVALIDATE_PADDING),
+                                (mLastY - mLastR - INVALIDATE_PADDING));
+                    mRect.union((mLastX + mLastR + INVALIDATE_PADDING),
+                                (mLastY + mLastR + INVALIDATE_PADDING));
+                }
 
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
 //                    mCanvas.drawLine(mLastX, mLastY, controlX, controlY, mDebugPaints[0]);
 //                    mCanvas.drawLine(controlX, controlY, x, y, mDebugPaints[0]);
-                    mCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
                     mCanvas.drawLine(mLastX, mLastY, x, y, mDebugPaints[1]);
+                    mCanvas.drawPath(p, mDebugPaints[2]);
+                    mCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
                 }
             }
 
