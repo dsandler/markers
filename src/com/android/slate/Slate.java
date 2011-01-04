@@ -52,12 +52,12 @@ public class Slate extends View {
     private float mSizeVariation = 0.5f;
     private float mSizeExponent = 3.0f;
 
-    private float mRadius = 8.0f;
+    private float mRadius = 10.0f;
 
     private int mPenColor;
 
     private static final float TOUCH_SIZE_RANGE_MIN = 1.0f;
-    private static final float TOUCH_SIZE_RANGE_MAX = 50.0f;
+    private static final float TOUCH_SIZE_RANGE_MAX = 70.0f;
 
     private int mDebugFlags = 0;
 
