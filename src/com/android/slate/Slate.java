@@ -46,11 +46,11 @@ public class Slate extends View {
 
     private static final float INVALIDATE_PADDING = 4.0f;
 
-    private float mPressureVariation = 0.0f;
+    private float mPressureVariation = 0.5f;
     private float mPressureExponent = 2.0f;
 
-    private float mSizeVariation = 1.0f;
-    private float mSizeExponent = 2.0f;
+    private float mSizeVariation = 0.5f;
+    private float mSizeExponent = 3.0f;
 
     private float mRadius = 8.0f;
 
@@ -122,7 +122,9 @@ public class Slate extends View {
         try {
             File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
             d = new File(d, "Slates");
-            if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
+            if (!d.exists()) {
+                if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
+            }
             File file = new File(d, System.currentTimeMillis() + ".png");
             Log.d(TAG, "save: saving " + file);
             OutputStream os = new FileOutputStream(file);
