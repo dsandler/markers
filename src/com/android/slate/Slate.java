@@ -29,14 +29,14 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
 import java.util.Date;
+import java.util.LinkedList;
 
-public class Slate extends View {
+public class Slate extends View implements CoordBuffer.Stroker {
     private static final boolean DEBUG = true;
     private static final String TAG = "Slate";
 
-    private static final boolean DEBUG_INVALIDATE_ALL = false;
-
     public static final int FLAG_DEBUG_STROKES = 1;
+    public static final int FLAG_DEBUG_INVALIDATES = 1 << 1;
 
     private static final boolean BEZIER = false;
     private static final boolean WALK_PATHS = true;
@@ -65,16 +65,21 @@ public class Slate extends View {
     private Canvas mCanvas;
     private final RectF mRect = new RectF();
     private final Paint mPaint, mStrokePaint;
-    private final Paint mDebugPaints[] = new Paint[3];
+    private final Paint mDebugPaints[] = new Paint[4];
     private float mLastX = 0, mLastY = 0, mLastLen = 0, mLastR = -1;
     private float mTan[] = new float[2];
 
     private Path mWorkPath = new Path();
     private PathMeasure mWorkPathMeasure = new PathMeasure();
 
+    private CoordBuffer mCoordBuffer;
+
     public Slate(Context c, AttributeSet as) {
         super(c, as);
         setFocusable(true);
+        
+        mCoordBuffer = new CoordBuffer(3, this);
+        
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
         mPaint.setStyle(Paint.Style.FILL);
@@ -94,6 +99,8 @@ public class Slate extends View {
             mDebugPaints[1].setARGB(255, 255, 0, 128);
             mDebugPaints[2] = new Paint(mDebugPaints[0]);
             mDebugPaints[2].setARGB(255, 0, 255, 0);
+            mDebugPaints[3] = new Paint(mDebugPaints[0]);
+            mDebugPaints[3].setARGB(255, 30, 30, 255);
         }
     }
 
@@ -203,34 +210,62 @@ public class Slate extends View {
         }
     }
 
+    float dbgX = -1, dbgY = -1;
+    RectF dbgRect = new RectF();
+    MotionEvent.PointerCoords mTmpCoords = new MotionEvent.PointerCoords();
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        float x, y;
         int action = event.getActionMasked();
         if (action != MotionEvent.ACTION_CANCEL) {
             int N = event.getHistorySize();
             int P = 1; // event.getPointerCount();
+            if (dbgX >= 0) {
+                dbgRect.set(dbgX-1,dbgY-1,dbgX+1,dbgY+1);
+            }
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < P; j++) {
-                    x = event.getHistoricalX(j, i);
-                    y = event.getHistoricalY(j, i);
-                    drawPoint(x, y,
-                            event.getHistoricalPressure(j, i),
-                            event.getHistoricalTouchMajor(j, i));
+                    event.getHistoricalPointerCoords(j, i, mTmpCoords);
+                    if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
+                        if (dbgX >= 0) {
+                            mCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                        }
+                        dbgX = mTmpCoords.x;
+                        dbgY = mTmpCoords.y;
+                        dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
+                    }
+                    mCoordBuffer.add(mTmpCoords);
                 }
             }
             for (int j = 0; j < P; j++) {
-                x = event.getX(j);
-                y = event.getY(j);
-                drawPoint(x, y, event.getPressure(j), event.getTouchMajor(j));
+                event.getPointerCoords(j, mTmpCoords);
+                if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
+                    if (dbgX >= 0) {
+                        mCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                    }
+                    dbgX = mTmpCoords.x;
+                    dbgY = mTmpCoords.y;
+                    dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
+                }
+                mCoordBuffer.add(mTmpCoords);
+            }
+
+            if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
+                Rect dirty = new Rect();
+                dbgRect.roundOut(dirty);
+                invalidate(dirty);
             }
         }
 
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            // dump rest of stroke
+            mCoordBuffer.finish();
+
             // reset
             mLastX = mLastY = mTan[0] = mTan[1] = 0;
             
             mLastR = -1;
+
+            dbgX = dbgY = -1;
         }
         return true;
     }
@@ -239,7 +274,7 @@ public class Slate extends View {
         return a + f * (b - a);
     }
 
-    private void drawPoint(float x, float y, float pressure, float width) {
+    public void drawPoint(float x, float y, float pressure, float width) {
 //        Log.i("TouchPaint", "Drawing: " + x + "x" + y + " p="
 //                + pressure + " width=" + width);
         
@@ -331,7 +366,7 @@ public class Slate extends View {
                 }
             }
 
-            if (DEBUG_INVALIDATE_ALL) {
+            if ((mDebugFlags & FLAG_DEBUG_INVALIDATES) != 0) {
                 invalidate();
             } else {
                 Rect dirty = new Rect();
