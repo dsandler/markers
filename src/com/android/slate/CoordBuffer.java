@@ -43,11 +43,13 @@ public class CoordBuffer {
     int mBufSize;
     Stroker mStroker;
     MotionEvent.PointerCoords tmpCoord = new MotionEvent.PointerCoords();
+    float mDecay;
 
-    public CoordBuffer(int size, Stroker stroker) {
+    public CoordBuffer(int size, float decay, Stroker stroker) {
         mCoords = new LinkedList<MotionEvent.PointerCoords>();
         mBufSize = size;
         mStroker = stroker;
+        mDecay = (decay >= 0 && decay <= 1) ? decay : 1f;
     }
 
     public MotionEvent.PointerCoords filteredOutput(MotionEvent.PointerCoords out) {
@@ -65,7 +67,7 @@ public class CoordBuffer {
             size += pi.size * wi;
             w += wi;
 
-            wi *= 0.75f; // exponential backoff
+            wi *= mDecay; // exponential backoff
         }
 
         out.x = x / w;

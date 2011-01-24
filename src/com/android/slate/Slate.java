@@ -39,8 +39,12 @@ public class Slate extends View implements CoordBuffer.Stroker {
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 1;
 
     private static final boolean BEZIER = false;
+    private static final float BEZIER_CONTROL_POINT_DISTANCE=0.25f;
     private static final boolean WALK_PATHS = true;
     private static final float WALK_STEP_PX = 3.0f;
+
+    private static final int SMOOTHING_FILTER_WLEN = 3;
+    private static final float SMOOTHING_FILTER_DECAY = 0.75f;
 
     private static final int FIXED_DIMENSION = 0; // 1024;
 
@@ -78,7 +82,7 @@ public class Slate extends View implements CoordBuffer.Stroker {
         super(c, as);
         setFocusable(true);
         
-        mCoordBuffer = new CoordBuffer(3, this);
+        mCoordBuffer = new CoordBuffer(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
         
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
@@ -294,7 +298,9 @@ public class Slate extends View implements CoordBuffer.Stroker {
         Log.d(TAG, String.format("(%g, %g): pnorm=%g wnorm=%g rad=%g", x, y, pressureNorm, widthNorm, r));
 
         if (mBitmap != null) {
-            mCanvas.drawCircle(x, y, r, mPaint);
+            if (!WALK_PATHS) {
+                mCanvas.drawCircle(x, y, r, mPaint);
+            }
 
             mRect.set((x - r - INVALIDATE_PADDING),
                       (y - r - INVALIDATE_PADDING),
@@ -308,8 +314,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
                 p.reset();
                 p.moveTo(mLastX, mLastY);
 
-                float controlX = mLastX + mTan[0]*0.5f;
-                float controlY = mLastY + mTan[1]*0.5f;
+                float controlX = mLastX + mTan[0]*BEZIER_CONTROL_POINT_DISTANCE;
+                float controlY = mLastY + mTan[1]*BEZIER_CONTROL_POINT_DISTANCE;
 
                 if (BEZIER && (mTan[0] != 0 || mTan[1] != 0)) {
                     p.quadTo(controlX, controlY, x, y);
