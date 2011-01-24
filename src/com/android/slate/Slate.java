@@ -49,10 +49,10 @@ public class Slate extends View implements CoordBuffer.Stroker {
     private float mPressureVariation = 0.5f;
     private float mPressureExponent = 2.0f;
 
-    private float mSizeVariation = 0.5f;
-    private float mSizeExponent = 3.0f;
+    private float mSizeVariation = 0.8f;
+    private float mSizeExponent = 2.0f;
 
-    private float mRadius = 10.0f;
+    private float mRadius = 8.0f;
 
     private int mPenColor;
 
