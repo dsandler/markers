@@ -56,6 +56,18 @@
             android:layout_marginRight="6dip"
             />
         <Button
+            android:id="@+id/load"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="load"
+            android:onClick="clickLoad"
+            android:textSize="12sp"
+            android:textColor="#FFFFFFFF"
+            android:background="#80606060"
+            android:padding="4dip"
+            android:layout_marginRight="6dip"
+            />
+        <Button
             android:id="@+id/save"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

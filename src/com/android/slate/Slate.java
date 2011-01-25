@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
@@ -32,8 +33,8 @@ import java.util.Date;
 import java.util.LinkedList;
 
 public class Slate extends View implements CoordBuffer.Stroker {
-    private static final boolean DEBUG = true;
-    private static final String TAG = "Slate";
+    static final boolean DEBUG = true;
+    static final String TAG = "Slate";
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 1;
@@ -127,6 +128,14 @@ public class Slate extends View implements CoordBuffer.Stroker {
             setPenColor(mPenColor);
             mPaint.setStyle(Paint.Style.FILL);
         }
+    }
+
+    public void paintBitmap(Bitmap b) {
+        Matrix m = new Matrix();
+        RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
+        RectF d = new RectF(0, 0, mBitmap.getWidth(), mBitmap.getHeight());
+        m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
+        mCanvas.drawBitmap(b, m, null);
     }
 
     public void save() {

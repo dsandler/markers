@@ -1,12 +1,20 @@
 package com.android.slate;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
+import android.provider.MediaStore;
 import android.util.Log;
+import android.view.View;
 
 public class SlateActivity extends Activity
 {
+    final static int LOAD_IMAGE = 1000;
+
     Slate mSlate;
 
     @Override
@@ -25,6 +33,11 @@ public class SlateActivity extends Activity
     }
     public void clickSave(View v) {
         mSlate.save();
+    }
+    public void clickLoad(View v) {
+        Intent i = new Intent(Intent.ACTION_PICK,
+                       android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI);
+        startActivityForResult(i, LOAD_IMAGE); 
     }
     public void clickDebug(View v) {
         mSlate.setDebugFlags(mSlate.getDebugFlags() == 0 ? Slate.FLAG_DEBUG_STROKES : 0);
@@ -46,4 +59,26 @@ public class SlateActivity extends Activity
         }
         mSlate.setPenColor(color);
     }
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) { 
+        super.onActivityResult(requestCode, resultCode, imageReturnedIntent); 
+
+        switch (requestCode) { 
+        case LOAD_IMAGE:
+            if (resultCode == RESULT_OK){  
+                Uri contentUri = imageReturnedIntent.getData();
+
+                try {
+                    Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
+                    if (b != null) {
+                        mSlate.clear();
+                        mSlate.paintBitmap(b);
+                    }
+                } catch (java.io.FileNotFoundException ex) {
+                } catch (java.io.IOException ex) {
+                }
+            }
+        }
+    }
+    
 }
