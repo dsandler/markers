@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 public class SlateActivity extends Activity
 {
@@ -32,7 +33,8 @@ public class SlateActivity extends Activity
         mSlate.invert();
     }
     public void clickSave(View v) {
-        mSlate.save();
+        String filename = mSlate.save();
+        Toast.makeText(this, "Saved to " + filename, Toast.LENGTH_SHORT).show();
     }
     public void clickLoad(View v) {
         Intent i = new Intent(Intent.ACTION_PICK,
@@ -41,6 +43,8 @@ public class SlateActivity extends Activity
     }
     public void clickDebug(View v) {
         mSlate.setDebugFlags(mSlate.getDebugFlags() == 0 ? Slate.FLAG_DEBUG_STROKES : 0);
+        Toast.makeText(this, "Debug mode " + ((mSlate.getDebugFlags() == 0) ? "off" : "on"),
+            Toast.LENGTH_SHORT).show();
     }
     public void clickColor(View v) {
         int color = 0xFFFFFFFF;
@@ -67,11 +71,11 @@ public class SlateActivity extends Activity
         case LOAD_IMAGE:
             if (resultCode == RESULT_OK){  
                 Uri contentUri = imageReturnedIntent.getData();
+                Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
 
                 try {
                     Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
                     if (b != null) {
-                        mSlate.clear();
                         mSlate.paintBitmap(b);
                     }
                 } catch (java.io.FileNotFoundException ex) {

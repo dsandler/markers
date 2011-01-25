@@ -138,7 +138,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
         mCanvas.drawBitmap(b, m, null);
     }
 
-    public void save() {
+    public String save() {
+        String fn = null;
         try {
             File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
             d = new File(d, "Slates");
@@ -150,13 +151,14 @@ public class Slate extends View implements CoordBuffer.Stroker {
             OutputStream os = new FileOutputStream(file);
             mBitmap.compress(Bitmap.CompressFormat.PNG, 0, os);
             os.close();
+            fn = file.toString();
             MediaScannerConnection.scanFile(getContext(),
-                    new String[] { file.toString() }, null, null
+                    new String[] { fn }, null, null
                     );
-            
         } catch (IOException e) {
             Log.d(TAG, "save: error: " + e);
         }
+        return fn;
     }
 
     public void invert() {
