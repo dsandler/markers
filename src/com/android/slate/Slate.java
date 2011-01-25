@@ -10,6 +10,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.PorterDuff;
@@ -111,7 +112,7 @@ public class Slate extends View implements CoordBuffer.Stroker {
 
     public void clear() {
         if (mCanvas != null) {
-            mCanvas.drawColor(0xFF000000);
+            mCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
             invalidate();
         }
     }
@@ -203,8 +204,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
         }
 
         Bitmap newBitmap = Bitmap.createBitmap(curW, curH,
-                Bitmap.Config.RGB_565);
-//                Bitmap.Config.ARGB_8888);
+//                Bitmap.Config.RGB_565);
+                Bitmap.Config.ARGB_8888);
         Log.d(TAG, "new size: " + w + "x" + h);
         Log.d(TAG, "old bitmap: " + mBitmap);
         Log.d(TAG, "creaeted bitmap " + curW + "x" + curH + ": " + newBitmap);
@@ -309,7 +310,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
         Log.d(TAG, String.format("(%g, %g): pnorm=%g wnorm=%g rad=%g", x, y, pressureNorm, widthNorm, r));
 
         if (mBitmap != null) {
-            if (!WALK_PATHS) {
+            if (!WALK_PATHS || mLastR < 0) {
+                // poke!
                 mCanvas.drawCircle(x, y, r, mPaint);
             }
 

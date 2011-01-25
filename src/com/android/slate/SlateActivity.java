@@ -24,6 +24,7 @@ public class SlateActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
+        setPenColor(0xFF000000);
     }
 
     public void clickClear(View v) {
@@ -61,6 +62,9 @@ public class SlateActivity extends Activity
             case R.id.yellow: color = 0xFFFFFF00; break;
             case R.id.purple: color = 0xFF6000A0; break;
         }
+    }
+
+    public void setPenColor(int color) {
         mSlate.setPenColor(color);
     }
 
