@@ -10,6 +10,9 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 public class SlateActivity extends Activity
@@ -24,7 +27,7 @@ public class SlateActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
-        setPenColor(0xFF000000);
+        clickColor(findViewById(R.id.black));
     }
 
     public void clickClear(View v) {
@@ -48,7 +51,7 @@ public class SlateActivity extends Activity
             Toast.LENGTH_SHORT).show();
     }
     public void clickColor(View v) {
-        int color = 0xFFFFFFFF;
+        int color = 0xFF000000;
         switch (v.getId()) {
             case R.id.black:  color = 0xFF000000; break;
             case R.id.white:  color = 0xFFFFFFFF; break;
@@ -61,6 +64,14 @@ public class SlateActivity extends Activity
             case R.id.orange: color = 0xFFFF8000; break;
             case R.id.yellow: color = 0xFFFFFF00; break;
             case R.id.purple: color = 0xFF6000A0; break;
+        }
+        setPenColor(color);
+
+        ViewGroup list = (ViewGroup) findViewById(R.id.colors);
+        float dip = getResources().getDisplayMetrics().density;
+        for (int i=0; i<list.getChildCount(); i++) {
+            Button c = (Button) list.getChildAt(i);
+            c.setText(c==v?"\u25A0":"");
         }
     }
 
