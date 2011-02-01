@@ -122,8 +122,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
         mDebugFlags = f;
 
         if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
-            mStrokePaint.setARGB(128, 255,255,255);
-            mPaint.setARGB(128, 255,255,255);
+            mStrokePaint.setAlpha(128);
+            mPaint.setAlpha(128);
             mPaint.setStyle(Paint.Style.STROKE);
         } else {
             setPenColor(mPenColor);
@@ -160,25 +160,6 @@ public class Slate extends View implements CoordBuffer.Stroker {
             Log.d(TAG, "save: error: " + e);
         }
         return fn;
-    }
-
-    public void invert() {
-//        mCanvas.drawColor(0xFFFFFFFF, PorterDuff.Mode.XOR);
-        Log.d(TAG, "invert");
-        Paint p = new Paint(); 
-        float[] mx = { 
-             -1.0f,  0.0f,  0.0f,  0.0f,  1.0f, 
-              0.0f, -1.0f,  0.0f,  0.0f,  1.0f, 
-              0.0f,  0.0f, -1.0f,  0.0f,  1.0f, 
-              0.0f,  0.0f,  0.0f,  1.0f,  0.0f 
-        }; 
-        ColorMatrix cm = new ColorMatrix(mx); 
-        p.setColorFilter(new ColorMatrixColorFilter(cm)); 
-
-//        mCanvas.drawRect(new Rect(0, 0, mCanvas.getWidth(), mCanvas.getHeight()), p);
-        mCanvas.drawBitmap(mBitmap, 0, 0, p);
-
-        invalidate();
     }
 
     public void setPenColor(int color) {
