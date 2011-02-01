@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,14 +28,15 @@ public class SlateActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mSlate.setDensity(metrics.density);
         clickColor(findViewById(R.id.black));
     }
 
     public void clickClear(View v) {
         mSlate.clear();
-    }
-    public void clickInvert(View v) {
-        mSlate.invert();
     }
     public void clickSave(View v) {
         String filename = mSlate.save();

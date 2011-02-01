@@ -52,15 +52,17 @@ public class Slate extends View implements CoordBuffer.Stroker {
 
     private static final float INVALIDATE_PADDING = 4.0f;
 
-    private float mPressureVariation = 0.5f;
+    private float mPressureVariation = 1.5f;
     private float mPressureExponent = 2.0f;
 
-    private float mSizeVariation = 0.8f;
-    private float mSizeExponent = 2.0f;
+    private float mSizeVariation = 0;
+    private float mSizeExponent = 1.0f;
 
-    private float mRadius = 8.0f;
+    private float mRadius = 6.0f;
 
     private int mPenColor;
+
+    private float mDensity = 1.0f;
 
     private static final float TOUCH_SIZE_RANGE_MIN = 1.0f;
     private static final float TOUCH_SIZE_RANGE_MAX = 70.0f;
@@ -168,9 +170,14 @@ public class Slate extends View implements CoordBuffer.Stroker {
         mStrokePaint.setColor(color);
     }
 
+    public void setDensity(float d) {
+        mDensity = d;
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
+
         int curW = mBitmap != null ? mBitmap.getWidth() : 0;
         int curH = mBitmap != null ? mBitmap.getHeight() : 0;
         if (curW >= w && curH >= h) {
@@ -284,7 +291,7 @@ public class Slate extends View implements CoordBuffer.Stroker {
         // TODO: pressure
         float pressureNorm = pressure;
 
-        float r = mRadius * (1
+        float r = mRadius * mDensity * (1
                 + (float) (Math.pow(widthNorm, mSizeExponent) - 0.5f) * mSizeVariation
                 + (float) (Math.pow(pressureNorm, mPressureExponent) - 0.5f) * mPressureVariation
             );
