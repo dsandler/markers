@@ -35,8 +35,6 @@ import java.util.LinkedList;
 public class CoordBuffer {
     public static boolean DEBUG = true;
 
-    public boolean mUseVelocity = false;
-
     public static interface Stroker {
         public void drawPoint(float x, float y, float pressure, float width);
     }
@@ -59,25 +57,15 @@ public class CoordBuffer {
 
         float wi = 1, w = 0;
         float x = 0, y = 0, pressure = 0, size = 0;
-        MotionEvent.PointerCoords pi = null, pi_1 = null, pi_2 = null;
+        MotionEvent.PointerCoords pi;
         Iterator<MotionEvent.PointerCoords> iter = mCoords.descendingIterator();
         while (iter.hasNext()) {
-            pi_2 = pi_1;
-            pi_1 = pi;
             pi = iter.next();
             x += pi.x * wi;
             y += pi.y * wi;
             pressure += pi.pressure * wi;
             size += pi.size * wi;
             w += wi;
-
-            if (mUseVelocity && pi_2 != null) {
-                x += (2*pi_1.x - pi_2.x);
-                y += (2*pi_1.y - pi_2.y);
-                pressure += (2*pi_1.pressure - pi_2.pressure);
-                size += (2*pi_1.size - pi_2.size);
-                w += 1;
-            }
 
             wi *= mDecay; // exponential backoff
         }

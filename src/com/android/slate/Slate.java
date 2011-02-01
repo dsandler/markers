@@ -94,7 +94,7 @@ public class Slate extends View implements CoordBuffer.Stroker {
         mStrokePaint = new Paint(mPaint);
         mStrokePaint.setStyle(Paint.Style.STROKE);
         mStrokePaint.setStrokeCap(Paint.Cap.ROUND);
-        setPenColor(0xFF000000);
+        setPenColor(0xFFFFFFFF);
 
         if (true) {
             mDebugPaints[0] = new Paint();
@@ -122,8 +122,8 @@ public class Slate extends View implements CoordBuffer.Stroker {
         mDebugFlags = f;
 
         if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
-            mStrokePaint.setAlpha(128);
-            mPaint.setAlpha(128);
+            mStrokePaint.setARGB(128, 255,255,255);
+            mPaint.setARGB(128, 255,255,255);
             mPaint.setStyle(Paint.Style.STROKE);
         } else {
             setPenColor(mPenColor);
