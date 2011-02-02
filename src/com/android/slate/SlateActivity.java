@@ -28,11 +28,15 @@ public class SlateActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
+    
+        clickColor(findViewById(R.id.black));
+    }
 
+    @Override
+    public void onAttachedToWindow() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         mSlate.setDensity(metrics.density);
-        clickColor(findViewById(R.id.black));
     }
 
     public void clickClear(View v) {
@@ -57,15 +61,20 @@ public class SlateActivity extends Activity
         switch (v.getId()) {
             case R.id.black:  color = 0xFF000000; break;
             case R.id.white:  color = 0xFFFFFFFF; break;
+            case R.id.lgray:  color = 0xFFC0C0C0; break;
+            case R.id.gray:   color = 0xFF808080; break;
+            case R.id.dgray:  color = 0xFF404040; break;
+
             case R.id.red:    color = 0xFFFF0000; break;
             case R.id.green:  color = 0xFF00FF00; break;
             case R.id.blue:   color = 0xFF0000FF; break;
 
-            case R.id.gray:   color = 0xFF808080; break;
             case R.id.pink:   color = 0xFFFF00CC; break;
             case R.id.orange: color = 0xFFFF8000; break;
             case R.id.yellow: color = 0xFFFFFF00; break;
             case R.id.purple: color = 0xFF6000A0; break;
+
+            case R.id.brown:  color = 0xFF804000; break;
         }
         setPenColor(color);
 

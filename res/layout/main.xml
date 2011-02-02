@@ -13,10 +13,11 @@
 
     <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="30dip"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="4dip"
         >
         <Button
             android:id="@+id/clear"
@@ -24,37 +25,23 @@
             android:layout_height="match_parent"
             android:text="clear"
             android:onClick="clickClear"
-            android:textSize="12sp"
+            android:textSize="@dimen/ui_font_size"
             android:textColor="#FFFFFFFF"
             android:background="#80606060"
-            android:padding="4dip"
-            android:layout_marginRight="6dip"
+            android:padding="6dip"
+            android:layout_marginRight="4dip"
             />
-        <!--
-        <Button
-            android:id="@+id/invert"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="invert"
-            android:onClick="clickInvert"
-            android:textSize="12sp"
-            android:textColor="#FFFFFFFF"
-            android:background="#80606060"
-            android:padding="4dip"
-            android:layout_marginRight="6dip"
-            />
-        -->
         <Button
             android:id="@+id/debug"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:text="debug"
             android:onClick="clickDebug"
-            android:textSize="12sp"
+            android:textSize="@dimen/ui_font_size"
             android:textColor="#FFFFFFFF"
             android:background="#80606060"
-            android:padding="4dip"
-            android:layout_marginRight="6dip"
+            android:padding="6dip"
+            android:layout_marginRight="4dip"
             />
         <Button
             android:id="@+id/load"
@@ -62,11 +49,11 @@
             android:layout_height="match_parent"
             android:text="load"
             android:onClick="clickLoad"
-            android:textSize="12sp"
+            android:textSize="@dimen/ui_font_size"
             android:textColor="#FFFFFFFF"
             android:background="#80606060"
-            android:padding="4dip"
-            android:layout_marginRight="6dip"
+            android:padding="6dip"
+            android:layout_marginRight="4dip"
             />
         <Button
             android:id="@+id/save"
@@ -74,113 +61,144 @@
             android:layout_height="match_parent"
             android:text="save"
             android:onClick="clickSave"
-            android:textSize="12sp"
+            android:textSize="@dimen/ui_font_size"
             android:textColor="#FFFFFFFF"
             android:background="#80606060"
-            android:padding="4dip"
+            android:padding="6dip"
             />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/colors"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/button_bar_height"
         android:orientation="horizontal"
         android:gravity="center"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:background="#80606060"
-        android:padding="2dip"
         >
         <Button
             android:id="@+id/black"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FF000000"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
+
             android:textColor="#FFFFFFFF"
             />
         <Button
             android:id="@+id/white"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FFFFFFFF"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
-            />
-        <Button
-            android:id="@+id/red"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
-            android:onClick="clickColor"
-            android:background="#FFFF0000"
-            android:layout_gravity="center"
-            android:layout_marginRight="2dip"
-            />
-        <Button
-            android:id="@+id/green"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
-            android:onClick="clickColor"
-            android:background="#FF00FF00"
-            android:layout_gravity="center"
-            android:layout_marginRight="2dip"
-            />
-        <Button
-            android:id="@+id/blue"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
-            android:onClick="clickColor"
-            android:background="#FF0000FF"
-            android:layout_gravity="center"
-            android:layout_marginRight="2dip"
+
             />
 
         <Button
+            android:id="@+id/lgray"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FFC0C0C0"
+            android:layout_gravity="center"
+            />
+        <Button
             android:id="@+id/gray"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FF808080"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
             />
         <Button
+            android:id="@+id/dgray"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FF404040"
+            android:layout_gravity="center"
+            />
+
+        <Button
+            android:id="@+id/red"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FFFF0000"
+            android:layout_gravity="center"
+            />
+        <Button
+            android:id="@+id/green"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FF00FF00"
+            android:layout_gravity="center"
+            />
+        <Button
+            android:id="@+id/blue"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FF0000FF"
+            android:layout_gravity="center"
+            />
+
+        <Button
             android:id="@+id/pink"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FFFF00CC"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
             />
         <Button
             android:id="@+id/orange"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FFFF8000"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
             />
         <Button
             android:id="@+id/yellow"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FFFFFF00"
             android:layout_gravity="center"
-            android:layout_marginRight="2dip"
             />
         <Button
             android:id="@+id/purple"
-            android:layout_width="48dip"
-            android:layout_height="24dip"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:onClick="clickColor"
             android:background="#FF6000A0"
+            android:layout_gravity="center"
+            />
+        <Button
+            android:id="@+id/brown"
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:onClick="clickColor"
+            android:background="#FF804000"
             android:layout_gravity="center"
             />
     </LinearLayout>
