@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -16,9 +17,20 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import android.media.MediaScannerConnection;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.IOException;
+
 public class SlateActivity extends Activity
 {
     final static int LOAD_IMAGE = 1000;
+
+    static final String TAG = "Markers";
+
+    public static final String IMAGE_SAVE_DIRNAME = "Drawings";
 
     Slate mSlate;
 
@@ -42,10 +54,32 @@ public class SlateActivity extends Activity
     public void clickClear(View v) {
         mSlate.clear();
     }
+
     public void clickSave(View v) {
-        String filename = mSlate.save();
-        Toast.makeText(this, "Saved to " + filename, Toast.LENGTH_SHORT).show();
+        String fn = null;
+        Bitmap bits = mSlate.getBitmap();
+        try {
+            File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+            d = new File(d, IMAGE_SAVE_DIRNAME);
+            if (!d.exists()) {
+                if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
+            }
+            File file = new File(d, System.currentTimeMillis() + ".png");
+            Log.d(TAG, "save: saving " + file);
+            OutputStream os = new FileOutputStream(file);
+            bits.compress(Bitmap.CompressFormat.PNG, 0, os);
+            os.close();
+            fn = file.toString();
+            MediaScannerConnection.scanFile(this,
+                    new String[] { fn }, null, null
+                    );
+            Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Log.d(TAG, "save: error: " + e);
+            Toast.makeText(this, "Error saving to " + fn, Toast.LENGTH_SHORT).show();
+        }
     }
+
     public void clickLoad(View v) {
         Intent i = new Intent(Intent.ACTION_PICK,
                        android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI);

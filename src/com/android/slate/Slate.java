@@ -24,21 +24,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.media.MediaScannerConnection;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.IOException;
-import java.util.Date;
-import java.util.LinkedList;
 
 public class Slate extends View {
 
     static final boolean DEBUG = true;
-    static final String TAG = "Slate";
-
-    public static final String IMAGE_SAVE_DIRNAME = "Drawings";
+    static final String TAG = SlateActivity.TAG + "/Slate";
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 1;
@@ -292,27 +282,8 @@ public class Slate extends View {
         mCanvas.drawBitmap(b, m, null);
     }
 
-    public String save() {
-        String fn = null;
-        try {
-            File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            d = new File(d, IMAGE_SAVE_DIRNAME);
-            if (!d.exists()) {
-                if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
-            }
-            File file = new File(d, System.currentTimeMillis() + ".png");
-            Log.d(TAG, "save: saving " + file);
-            OutputStream os = new FileOutputStream(file);
-            mBitmap.compress(Bitmap.CompressFormat.PNG, 0, os);
-            os.close();
-            fn = file.toString();
-            MediaScannerConnection.scanFile(getContext(),
-                    new String[] { fn }, null, null
-                    );
-        } catch (IOException e) {
-            Log.d(TAG, "save: error: " + e);
-        }
-        return fn;
+    public Bitmap getBitmap() {
+        return mBitmap;
     }
 
     public void setPenColor(int color) {
