@@ -19,10 +19,11 @@ import android.widget.Toast;
 
 import android.media.MediaScannerConnection;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class SlateActivity extends Activity
 {
@@ -31,16 +32,21 @@ public class SlateActivity extends Activity
     static final String TAG = "Markers";
 
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
+    public static final String WIP_FILENAME = ".temporary.png";
 
     Slate mSlate;
 
     @Override
-    public void onCreate(Bundle savedInstanceState)
+    public void onCreate(Bundle icicle)
     {
-        super.onCreate(savedInstanceState);
+        super.onCreate(icicle);
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
     
+        if (icicle != null) {
+            onRestoreInstanceState(icicle);
+        }
+
         clickColor(findViewById(R.id.black));
     }
 
@@ -51,20 +57,53 @@ public class SlateActivity extends Activity
         mSlate.setDensity(metrics.density);
     }
 
+    @Override
+    protected void onStop() {
+        saveDrawing(WIP_FILENAME);
+        super.onStop();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        loadDrawing(WIP_FILENAME);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle icicle) {
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle icicle) {
+    }
+
     public void clickClear(View v) {
         mSlate.clear();
     }
 
-    public void clickSave(View v) {
+    public void loadDrawing(String filename) {
+        File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        d = new File(d, IMAGE_SAVE_DIRNAME);
+        if (!d.exists()) {
+            return;
+        }
+        Bitmap bits = BitmapFactory.decodeFile(new File(d, filename).toString());
+        if (bits != null) {
+            mSlate.setBitmap(bits);
+        }
+    }
+
+    public String saveDrawing(String filename) {
         String fn = null;
         Bitmap bits = mSlate.getBitmap();
+
         try {
             File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
             d = new File(d, IMAGE_SAVE_DIRNAME);
             if (!d.exists()) {
                 if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
             }
-            File file = new File(d, System.currentTimeMillis() + ".png");
+            File file = new File(d, filename);
             Log.d(TAG, "save: saving " + file);
             OutputStream os = new FileOutputStream(file);
             bits.compress(Bitmap.CompressFormat.PNG, 0, os);
@@ -73,10 +112,16 @@ public class SlateActivity extends Activity
             MediaScannerConnection.scanFile(this,
                     new String[] { fn }, null, null
                     );
-            Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             Log.d(TAG, "save: error: " + e);
-            Toast.makeText(this, "Error saving to " + fn, Toast.LENGTH_SHORT).show();
+        }
+        return fn;
+    }
+
+    public void clickSave(View v) {
+        String fn = saveDrawing(System.currentTimeMillis() + ".png");
+        if (fn != null) {
+            Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -286,6 +286,19 @@ public class Slate extends View {
         return mBitmap;
     }
 
+    public void setBitmap(Bitmap b) {
+        if (b == null) return;
+
+        Bitmap newBitmap = Bitmap.createBitmap(b.getWidth(), b.getHeight(),
+                Bitmap.Config.ARGB_8888);
+        Canvas newCanvas = new Canvas();
+        newCanvas.setBitmap(newBitmap);
+        newCanvas.drawBitmap(b, 0, 0, null);
+        mBitmap = newBitmap;
+        mCanvas = newCanvas;
+
+    }
+
     public void setPenColor(int color) {
         for (StrokeState stroke : mStrokes) {
             // XXX: todo: only do this if the stroke hasn't begun already
@@ -319,7 +332,7 @@ public class Slate extends View {
                 Bitmap.Config.ARGB_8888);
         Log.d(TAG, "new size: " + w + "x" + h);
         Log.d(TAG, "old bitmap: " + mBitmap);
-        Log.d(TAG, "creaeted bitmap " + curW + "x" + curH + ": " + newBitmap);
+        Log.d(TAG, "created bitmap " + curW + "x" + curH + ": " + newBitmap);
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
         if (mBitmap != null) {
