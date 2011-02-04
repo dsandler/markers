@@ -86,7 +86,6 @@
             android:onClick="clickColor"
             android:background="#FF000000"
             android:layout_gravity="center"
-
             android:textColor="#FFFFFFFF"
             />
         <Button
@@ -97,7 +96,6 @@
             android:onClick="clickColor"
             android:background="#FFFFFFFF"
             android:layout_gravity="center"
-
             />
 
         <Button
