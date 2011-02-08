@@ -257,10 +257,13 @@ public class Slate extends View {
     }
 
     public void clear() {
-        if (mCanvas != null) {
-            mCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
-            invalidate();
-        }
+//        if (mCanvas != null) {
+//            mCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
+//            invalidate();
+//        }
+        mBitmap = null;
+        onSizeChanged(getWidth(), getHeight(), 0, 0);
+        invalidate();
     }
 
     public int getDebugFlags() { return mDebugFlags; }
@@ -280,6 +283,11 @@ public class Slate extends View {
         RectF d = new RectF(0, 0, mBitmap.getWidth(), mBitmap.getHeight());
         m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
         mCanvas.drawBitmap(b, m, null);
+
+        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): mBitmap=%s (%dx%d) mCanvas=%s",
+            b.toString(), b.getWidth(), b.getHeight(),
+            mBitmap.toString(), mBitmap.getWidth(), mBitmap.getHeight(),
+            mCanvas.toString()));
     }
 
     public Bitmap getBitmap() {
@@ -297,6 +305,10 @@ public class Slate extends View {
         mBitmap = newBitmap;
         mCanvas = newCanvas;
 
+        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mBitmap=%s (%dx%d) mCanvas=%s",
+            b.toString(), b.getWidth(), b.getHeight(),
+            mBitmap.toString(), mBitmap.getWidth(), mBitmap.getHeight(),
+            mCanvas.toString()));
     }
 
     public void setPenColor(int color) {
@@ -330,9 +342,11 @@ public class Slate extends View {
         Bitmap newBitmap = Bitmap.createBitmap(curW, curH,
 //                Bitmap.Config.RGB_565);
                 Bitmap.Config.ARGB_8888);
-        Log.d(TAG, "new size: " + w + "x" + h);
-        Log.d(TAG, "old bitmap: " + mBitmap);
-        Log.d(TAG, "created bitmap " + curW + "x" + curH + ": " + newBitmap);
+        if (DEBUG) {
+            Log.d(TAG, "new size: " + w + "x" + h);
+            Log.d(TAG, "old bitmap: " + mBitmap);
+            Log.d(TAG, "created bitmap " + curW + "x" + curH + ": " + newBitmap);
+        }
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
         if (mBitmap != null) {

@@ -36,6 +36,8 @@ public class SlateActivity extends Activity
 
     Slate mSlate;
 
+    boolean mJustLoadedImage = false;
+
     @Override
     public void onCreate(Bundle icicle)
     {
@@ -66,7 +68,11 @@ public class SlateActivity extends Activity
     @Override
     protected void onStart() {
         super.onStart();
-        loadDrawing(WIP_FILENAME);
+        if (!mJustLoadedImage) {
+            loadDrawing(WIP_FILENAME);
+        } else {
+            mJustLoadedImage = false;
+        }
     }
 
     @Override
@@ -174,17 +180,25 @@ public class SlateActivity extends Activity
 
         switch (requestCode) { 
         case LOAD_IMAGE:
-            if (resultCode == RESULT_OK){  
+            if (resultCode == RESULT_OK) {  
                 Uri contentUri = imageReturnedIntent.getData();
                 Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
+
+                loadDrawing(WIP_FILENAME);
+                mJustLoadedImage = true;
 
                 try {
                     Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
                     if (b != null) {
                         mSlate.paintBitmap(b);
+                        Log.d(TAG, "successfully loaded bitmap: " + b);
+                    } else {
+                        Log.e(TAG, "couldn't get bitmap from " + contentUri);
                     }
                 } catch (java.io.FileNotFoundException ex) {
+                    Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
                 } catch (java.io.IOException ex) {
+                    Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
                 }
             }
         }
