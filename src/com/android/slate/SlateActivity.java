@@ -171,6 +171,10 @@ public class SlateActivity extends Activity
         }
     }
 
+    public void clickUndo(View v) {
+        mSlate.undo();
+    }
+
     public void setPenColor(int color) {
         mSlate.setPenColor(color);
     }

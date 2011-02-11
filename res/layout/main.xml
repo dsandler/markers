@@ -32,6 +32,18 @@
             android:layout_marginRight="4dip"
             />
         <Button
+            android:id="@+id/undo"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="undo"
+            android:onClick="clickUndo"
+            android:textSize="@dimen/ui_font_size"
+            android:textColor="#FFFFFFFF"
+            android:background="#80606060"
+            android:padding="6dip"
+            android:layout_marginRight="4dip"
+            />
+        <Button
             android:id="@+id/debug"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

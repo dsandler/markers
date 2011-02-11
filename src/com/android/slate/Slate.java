@@ -64,8 +64,8 @@ public class Slate extends View {
 
     private int mDebugFlags = 0;
 
-    private Bitmap mBitmap;
-    private Canvas mCanvas;
+    private Bitmap mDrawingBitmap, mStrokeBitmap;
+    private Canvas mDrawingCanvas, mStrokeCanvas;
     private final Paint mDebugPaints[] = new Paint[4];
 
     private class StrokeState implements CoordBuffer.Stroker {
@@ -141,10 +141,10 @@ public class Slate extends View {
                 );
 //            Log.d(TAG, String.format("(%g, %g): pnorm=%g wnorm=%g rad=%g", x, y, pressureNorm, widthNorm, r));
 
-            if (mBitmap != null) {
+            if (mStrokeBitmap != null) {
                 if (!WALK_PATHS || mLastR < 0) {
                     // poke!
-                    mCanvas.drawCircle(x, y, r, mPaint);
+                    mStrokeCanvas.drawCircle(x, y, r, mPaint);
                 }
 
                 mRect.set((x - r - INVALIDATE_PADDING),
@@ -184,7 +184,7 @@ public class Slate extends View {
                             mTan[0] *= mLastLen; mTan[1] *= mLastLen;
 
                             ri = lerp(mLastR, r, d / mLastLen);
-                            mCanvas.drawCircle(posOut[0], posOut[1], ri, mPaint);
+                            mStrokeCanvas.drawCircle(posOut[0], posOut[1], ri, mPaint);
 
                             mRect.union(posOut[0] - ri, posOut[1] - ri, posOut[0] + ri, posOut[1] + ri);
                             
@@ -195,9 +195,9 @@ public class Slate extends View {
                     } else { // STROKE_PATHS
                         // TODO: use a trapezoid from circle tangents
                         mStrokePaint.setStrokeWidth(r+mLastR); // average x 2
-        //                mCanvas.drawLine(mLastX, mLastY, x, y, mStrokePaint);
+        //                mStrokeCanvas.drawLine(mLastX, mLastY, x, y, mStrokePaint);
 
-                        mCanvas.drawPath(p, mStrokePaint);
+                        mStrokeCanvas.drawPath(p, mStrokePaint);
 
                         mTan[0] = x - controlX;
                         mTan[1] = y - controlY;
@@ -209,11 +209,11 @@ public class Slate extends View {
                     }
 
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
-    //                    mCanvas.drawLine(mLastX, mLastY, controlX, controlY, mDebugPaints[0]);
-    //                    mCanvas.drawLine(controlX, controlY, x, y, mDebugPaints[0]);
-                        mCanvas.drawLine(mLastX, mLastY, x, y, mDebugPaints[1]);
-                        mCanvas.drawPath(p, mDebugPaints[2]);
-                        mCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
+    //                    mStrokeCanvas.drawLine(mLastX, mLastY, controlX, controlY, mDebugPaints[0]);
+    //                    mStrokeCanvas.drawLine(controlX, controlY, x, y, mDebugPaints[0]);
+                        mStrokeCanvas.drawLine(mLastX, mLastY, x, y, mDebugPaints[1]);
+                        mStrokeCanvas.drawPath(p, mDebugPaints[2]);
+                        mStrokeCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
                     }
                 }
 
@@ -257,11 +257,12 @@ public class Slate extends View {
     }
 
     public void clear() {
-//        if (mCanvas != null) {
-//            mCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
+//        if (mDrawingCanvas != null) {
+//            mDrawingCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
 //            invalidate();
 //        }
-        mBitmap = null;
+        mDrawingBitmap.recycle(); mStrokeBitmap.recycle();
+        mDrawingBitmap = mStrokeBitmap = null;
         onSizeChanged(getWidth(), getHeight(), 0, 0);
         invalidate();
     }
@@ -277,38 +278,59 @@ public class Slate extends View {
         mDebugFlags = f;
     }
 
+    public void commitStroke() {
+        mDrawingCanvas.drawBitmap(mStrokeBitmap, 0, 0, null);
+        mStrokeCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+    }
+
+    public void undo() {
+        mStrokeCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        invalidate();
+    }
+
     public void paintBitmap(Bitmap b) {
+        commitStroke();
+
         Matrix m = new Matrix();
         RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
-        RectF d = new RectF(0, 0, mBitmap.getWidth(), mBitmap.getHeight());
+        RectF d = new RectF(0, 0, mDrawingBitmap.getWidth(), mDrawingBitmap.getHeight());
         m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
-        mCanvas.drawBitmap(b, m, null);
+        mStrokeCanvas.drawBitmap(b, m, null);
 
-        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): mBitmap=%s (%dx%d) mCanvas=%s",
+        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) mDrawingCanvas=%s",
             b.toString(), b.getWidth(), b.getHeight(),
-            mBitmap.toString(), mBitmap.getWidth(), mBitmap.getHeight(),
-            mCanvas.toString()));
+            mDrawingBitmap.toString(), mDrawingBitmap.getWidth(), mDrawingBitmap.getHeight(),
+            mDrawingCanvas.toString()));
     }
 
     public Bitmap getBitmap() {
-        return mBitmap;
+        commitStroke();
+        return mDrawingBitmap;
     }
 
     public void setBitmap(Bitmap b) {
         if (b == null) return;
 
-        Bitmap newBitmap = Bitmap.createBitmap(b.getWidth(), b.getHeight(),
-                Bitmap.Config.ARGB_8888);
+        int newW = b.getWidth();
+        int newH = b.getHeight();
+        Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
         newCanvas.drawBitmap(b, 0, 0, null);
-        mBitmap = newBitmap;
-        mCanvas = newCanvas;
+        
+        if (mDrawingBitmap != null && !mDrawingBitmap.isRecycled()) mDrawingBitmap.recycle();
+        mDrawingBitmap = newBitmap;
+        mDrawingCanvas = newCanvas;
 
-        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mBitmap=%s (%dx%d) mCanvas=%s",
+        if (mStrokeBitmap != null && !mStrokeBitmap.isRecycled()) mStrokeBitmap.recycle();
+        mStrokeBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
+        mStrokeCanvas = new Canvas();
+        mStrokeCanvas.setBitmap(mStrokeBitmap);
+
+        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): bitmap=%s (%dx%d) mDrawingCanvas=%s",
             b.toString(), b.getWidth(), b.getHeight(),
-            mBitmap.toString(), mBitmap.getWidth(), mBitmap.getHeight(),
-            mCanvas.toString()));
+            mDrawingBitmap.toString(), mDrawingBitmap.getWidth(), mDrawingBitmap.getHeight(),
+            mDrawingCanvas.toString()));
     }
 
     public void setPenColor(int color) {
@@ -326,8 +348,8 @@ public class Slate extends View {
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
 
-        int curW = mBitmap != null ? mBitmap.getWidth() : 0;
-        int curH = mBitmap != null ? mBitmap.getHeight() : 0;
+        int curW = mDrawingBitmap != null ? mDrawingBitmap.getWidth() : 0;
+        int curH = mDrawingBitmap != null ? mDrawingBitmap.getHeight() : 0;
         if (curW >= w && curH >= h) {
             return;
         }
@@ -340,27 +362,33 @@ public class Slate extends View {
         }
 
         Bitmap newBitmap = Bitmap.createBitmap(curW, curH,
-//                Bitmap.Config.RGB_565);
                 Bitmap.Config.ARGB_8888);
         if (DEBUG) {
             Log.d(TAG, "new size: " + w + "x" + h);
-            Log.d(TAG, "old bitmap: " + mBitmap);
+            Log.d(TAG, "old bitmap: " + mDrawingBitmap);
             Log.d(TAG, "created bitmap " + curW + "x" + curH + ": " + newBitmap);
         }
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
-        if (mBitmap != null) {
+        if (mDrawingBitmap != null) {
             // copy the old bitmap in? doesn't seem to work
-            newCanvas.drawBitmap(mBitmap, 0, 0, null);
+            newCanvas.drawBitmap(mDrawingBitmap, 0, 0, null);
         }
-        mBitmap = newBitmap;
-        mCanvas = newCanvas;
+        if (mDrawingBitmap != null && !mDrawingBitmap.isRecycled()) mDrawingBitmap.recycle();
+        mDrawingBitmap = newBitmap;
+        mDrawingCanvas = newCanvas;
+
+        if (mStrokeBitmap != null && !mStrokeBitmap.isRecycled()) mStrokeBitmap.recycle();
+        mStrokeBitmap = Bitmap.createBitmap(curW, curH, Bitmap.Config.ARGB_8888);
+        mStrokeCanvas = new Canvas();
+        mStrokeCanvas.setBitmap(mStrokeBitmap);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mBitmap != null) {
-            canvas.drawBitmap(mBitmap, 0, 0, null);
+        if (mDrawingBitmap != null) {
+            canvas.drawBitmap(mDrawingBitmap, 0, 0, null);
+            canvas.drawBitmap(mStrokeBitmap, 0, 0, null);
         }
     }
 
@@ -372,6 +400,11 @@ public class Slate extends View {
         int action = event.getActionMasked();
         int N = event.getHistorySize();
         int P = event.getPointerCount();
+
+        // starting a new touch? commit the previous state of the canvas
+        if (action == MotionEvent.ACTION_DOWN) {
+            commitStroke();
+        }
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
             int j = event.getActionIndex();
@@ -392,7 +425,7 @@ public class Slate extends View {
                     event.getHistoricalPointerCoords(j, i, mTmpCoords);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
-                            mCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                            mStrokeCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
                         }
                         dbgX = mTmpCoords.x;
                         dbgY = mTmpCoords.y;
@@ -405,7 +438,7 @@ public class Slate extends View {
                 event.getPointerCoords(j, mTmpCoords);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
-                        mCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                        mStrokeCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
                     }
                     dbgX = mTmpCoords.x;
                     dbgY = mTmpCoords.y;
