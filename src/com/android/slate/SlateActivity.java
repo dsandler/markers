@@ -25,7 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class SlateActivity extends Activity
+public class SlateActivity extends Activity implements MrShaky.Listener
 {
     final static int LOAD_IMAGE = 1000;
 
@@ -36,12 +36,16 @@ public class SlateActivity extends Activity
 
     Slate mSlate;
 
+    MrShaky mShaky;
+
     boolean mJustLoadedImage = false;
 
     @Override
     public void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
+        mShaky = new MrShaky(this, this);
+
         setContentView(R.layout.main);
         mSlate = (Slate) findViewById(R.id.slate);
     
@@ -50,6 +54,27 @@ public class SlateActivity extends Activity
         }
 
         clickColor(findViewById(R.id.black));
+    }
+
+    // MrShaky.Listener
+    public void onShake() {
+        mSlate.undo();
+    }
+
+    public float getAccel() {
+        return mShaky.getCurrentMagnitude();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mShaky.pause();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mShaky.resume();
     }
 
     @Override
