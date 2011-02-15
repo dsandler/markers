@@ -2,4 +2,6 @@
 <resources>
     <dimen name="button_bar_height">28dp</dimen>
     <dimen name="ui_font_size">13sp</dimen>
+    <dimen name="default_pen_size_min">4dp</dimen>
+    <dimen name="default_pen_size_max">24dp</dimen>
 </resources>

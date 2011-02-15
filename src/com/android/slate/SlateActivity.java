@@ -2,6 +2,8 @@ package com.android.slate;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,6 +36,16 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
     public static final String WIP_FILENAME = ".temporary.png";
 
+    private static final String PREFS_NAME = "MarkersPrefs";
+
+    private static final String PREF_MIN_DIAMETER = "min_diameter";
+    private static final String PREF_MAX_DIAMETER = "max_diameter";
+    private static final String PREF_PRESSURE_MIN = "pressure_min";
+    private static final String PREF_PRESSURE_MAX = "pressure_max";
+    
+    private static final float DEF_PRESSURE_MIN = 0.2f;
+    private static final float DEF_PRESSURE_MAX = 0.9f;
+
     Slate mSlate;
 
     MrShaky mShaky;
@@ -54,6 +66,20 @@ public class SlateActivity extends Activity implements MrShaky.Listener
         }
 
         clickColor(findViewById(R.id.black));
+
+        Resources res = getResources();
+        float minDiameter = res.getDimension(R.dimen.default_pen_size_min);
+        float maxDiameter = res.getDimension(R.dimen.default_pen_size_max);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
+        
+        minDiameter = prefs.getFloat(PREF_MIN_DIAMETER, minDiameter);
+        maxDiameter = prefs.getFloat(PREF_MAX_DIAMETER, maxDiameter);
+        mSlate.setPenSize(minDiameter, maxDiameter);
+        
+        float pMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
+        float pMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
+        mSlate.setPressureRange(pMin, pMax);
     }
 
     // MrShaky.Listener
@@ -86,8 +112,16 @@ public class SlateActivity extends Activity implements MrShaky.Listener
 
     @Override
     protected void onStop() {
-        saveDrawing(WIP_FILENAME);
         super.onStop();
+        
+        saveDrawing(WIP_FILENAME);
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor prefsE = prefs.edit();
+        float[] range = new float[2];
+        mSlate.getPressureRange(range);
+        prefsE.putFloat(PREF_PRESSURE_MIN, range[0]);
+        prefsE.putFloat(PREF_PRESSURE_MAX, range[1]);
+        prefsE.commit();
     }
 
     @Override
@@ -162,7 +196,9 @@ public class SlateActivity extends Activity implements MrShaky.Listener
         startActivityForResult(i, LOAD_IMAGE); 
     }
     public void clickDebug(View v) {
-        mSlate.setDebugFlags(mSlate.getDebugFlags() == 0 ? Slate.FLAG_DEBUG_STROKES : 0);
+        mSlate.setDebugFlags(mSlate.getDebugFlags() == 0 
+            ? Slate.FLAG_DEBUG_EVERYTHING
+            : 0);
         Toast.makeText(this, "Debug mode " + ((mSlate.getDebugFlags() == 0) ? "off" : "on"),
             Toast.LENGTH_SHORT).show();
     }
@@ -189,7 +225,6 @@ public class SlateActivity extends Activity implements MrShaky.Listener
         setPenColor(color);
 
         ViewGroup list = (ViewGroup) findViewById(R.id.colors);
-        float dip = getResources().getDisplayMetrics().density;
         for (int i=0; i<list.getChildCount(); i++) {
             Button c = (Button) list.getChildAt(i);
             c.setText(c==v?"\u25A0":"");

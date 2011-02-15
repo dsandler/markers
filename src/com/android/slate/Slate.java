@@ -31,7 +31,9 @@ public class Slate extends View {
     static final String TAG = SlateActivity.TAG + "/Slate";
 
     public static final int FLAG_DEBUG_STROKES = 1;
-    public static final int FLAG_DEBUG_INVALIDATES = 1 << 1;
+    public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
+    public static final int FLAG_DEBUG_INVALIDATES = 1 << 2;
+    public static final int FLAG_DEBUG_EVERYTHING = ~0;
 
     public static final int MAX_POINTERS = 10;
 
@@ -47,26 +49,31 @@ public class Slate extends View {
 
     private static final float INVALIDATE_PADDING = 4.0f;
 
-    private float mPressureVariation = 1.5f;
     private float mPressureExponent = 2.0f;
 
-    private float mSizeVariation = 0;
-    private float mSizeExponent = 1.0f;
+    private float mPressureMin = 0;
+    private float mPressureMax = 1;
 
-    private float mRadius = 6.0f;
+    public static final float PRESSURE_UPDATE_DECAY = 0.1f;
+    public static final int PRESSURE_UPDATE_STEPS = 500; // points
+    private float mPressureRecentMin = 1;
+    private float mPressureRecentMax = 0;
+    private int mPressureUpdateCountdown = PRESSURE_UPDATE_STEPS;
+
+    private float mRadiusMin;
+    private float mRadiusMax;
+
+    private float mLastPressure;
 
     private int mPenColor;
 
     private float mDensity = 1.0f;
 
-    private static final float TOUCH_SIZE_RANGE_MIN = 1.0f;
-    private static final float TOUCH_SIZE_RANGE_MAX = 70.0f;
-
     private int mDebugFlags = 0;
 
     private Bitmap mDrawingBitmap, mStrokeBitmap;
     private Canvas mDrawingCanvas, mStrokeCanvas;
-    private final Paint mDebugPaints[] = new Paint[4];
+    private final Paint mDebugPaints[] = new Paint[10];
 
     private class StrokeState implements CoordBuffer.Stroker {
         private CoordBuffer mCoordBuffer;
@@ -107,6 +114,7 @@ public class Slate extends View {
         public void setDebugMode(boolean debug) {
             setPenColor(getPenColor() & 0xFFFFFF | (debug ? 0x80FFFFFF : 0xFFFFFFFF));
             mPaint.setStyle(debug ? Paint.Style.STROKE : Paint.Style.FILL);
+            invalidate();
         }
 
         public void finish() {
@@ -126,20 +134,28 @@ public class Slate extends View {
         public void drawPoint(float x, float y, float pressure, float width) {
     //        Log.i("TouchPaint", "Drawing: " + x + "x" + y + " p="
     //                + pressure + " width=" + width);
+            mLastPressure = pressure;
+            if (pressure < mPressureRecentMin) mPressureRecentMin = pressure;
+            if (pressure > mPressureRecentMax) mPressureRecentMax = pressure;
             
+            if (--mPressureUpdateCountdown == 0) {
+                final float decay = PRESSURE_UPDATE_DECAY;
+                mPressureMin = (1-decay) * mPressureMin + decay * mPressureRecentMin;
+                mPressureMax = (1-decay) * mPressureMax + decay * mPressureRecentMax;
+                mPressureUpdateCountdown = PRESSURE_UPDATE_STEPS;
+                mPressureRecentMin = 1;
+                mPressureRecentMax = 0;
+            }
 
-            if (width < TOUCH_SIZE_RANGE_MIN) width = TOUCH_SIZE_RANGE_MIN;
-            else if (width > TOUCH_SIZE_RANGE_MAX) width = TOUCH_SIZE_RANGE_MAX;
-            float widthNorm = (width - TOUCH_SIZE_RANGE_MIN)
-                / (TOUCH_SIZE_RANGE_MAX - TOUCH_SIZE_RANGE_MIN);
+            final float pressureNorm = (pressure - mPressureMin)
+                / (mPressureMax - mPressureMin);
 
-            float pressureNorm = pressure;
-
-            float r = mRadius * mDensity * (1
-                    + (float) (Math.pow(widthNorm, mSizeExponent) - 0.5f) * mSizeVariation
-                    + (float) (Math.pow(pressureNorm, mPressureExponent) - 0.5f) * mPressureVariation
-                );
-//            Log.d(TAG, String.format("(%g, %g): pnorm=%g wnorm=%g rad=%g", x, y, pressureNorm, widthNorm, r));
+            final float r = lerp(mRadiusMin, mRadiusMax,
+                   (float) Math.pow(pressureNorm, mPressureExponent));
+            if (false && 0 != (mDebugFlags)) {
+                Log.d(TAG, String.format("(%.1f, %.1f): pressure=%.2f range=%.2f-%.2f obs=%.2f-%.2f pnorm=%.2f rad=%.2f",
+                    x, y, pressure, mPressureMin, mPressureMax, mPressureRecentMin, mPressureRecentMax, pressureNorm, r));
+            }
 
             if (mStrokeBitmap != null) {
                 if (!WALK_PATHS || mLastR < 0) {
@@ -230,6 +246,10 @@ public class Slate extends View {
             mLastY = y;
             mLastR = r;
         }
+        
+        public float getRadius() {
+            return mLastR;
+        }
     }
 
     private StrokeState[] mStrokes = new StrokeState[MAX_POINTERS];
@@ -253,7 +273,26 @@ public class Slate extends View {
             mDebugPaints[2].setARGB(255, 0, 255, 0);
             mDebugPaints[3] = new Paint(mDebugPaints[0]);
             mDebugPaints[3].setARGB(255, 30, 30, 255);
+            mDebugPaints[4] = new Paint();
+            mDebugPaints[4].setStyle(Paint.Style.FILL);
+            mDebugPaints[4].setARGB(255, 128, 128, 128);
         }
+    }
+
+    public void setPenSize(float min, float max) {
+        mRadiusMin = min * 0.5f;
+        mRadiusMax = max * 0.5f;
+    }
+
+    public void setPressureRange(float min, float max) {
+        mPressureMin = min;
+        mPressureMax = max;
+    }
+    
+    public float[] getPressureRange(float[] r) {
+        r[0] = mPressureMin;
+        r[1] = mPressureMax;
+        return r;
     }
 
     public void clear() {
@@ -389,6 +428,23 @@ public class Slate extends View {
         if (mDrawingBitmap != null) {
             canvas.drawBitmap(mDrawingBitmap, 0, 0, null);
             canvas.drawBitmap(mStrokeBitmap, 0, 0, null);
+
+//            if (0 != mDebugFlags) {
+//                canvas.drawRect(
+            if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
+                StringBuffer strokeInfo = new StringBuffer();
+                for (StrokeState st : mStrokes) {
+                    strokeInfo.append(String.format("[%.1f] ", st.getRadius()));
+                }
+
+                canvas.drawText(
+                        String.format("p: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f)", 
+                            mLastPressure,
+                            mPressureMin, mPressureMax,
+                            mPressureRecentMin, mPressureRecentMax),
+                        2, 32, mDebugPaints[4]);
+                canvas.drawText(strokeInfo.toString(), 2, 48, mDebugPaints[4]);
+            }
         }
     }
 
