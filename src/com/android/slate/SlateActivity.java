@@ -1,18 +1,22 @@
 package com.android.slate;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -46,12 +50,32 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     private static final float DEF_PRESSURE_MIN = 0.2f;
     private static final float DEF_PRESSURE_MAX = 0.9f;
 
+    private static final int[] BUTTON_COLORS = {
+        0xFF000000,
+        0xFFFFFFFF,
+        0xFFC0C0C0,0xFF808080,
+        0xFF404040,0xFFFF0000,
+        0xFF00FF00,0xFF0000FF,
+        0xFFFF00CC,0xFFFF8000,
+        0xFFFFFF00,0xFF6000A0,0xFF804000,
+    };
+
     Slate mSlate;
 
     MrShaky mShaky;
 
     boolean mJustLoadedImage = false;
 
+    public static class ColorList extends LinearLayout {
+        public ColorList(Context c, AttributeSet as) {
+            super(c, as);
+        }
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent e) {
+            return true;
+        }
+    }
+    
     @Override
     public void onCreate(Bundle icicle)
     {
@@ -65,7 +89,25 @@ public class SlateActivity extends Activity implements MrShaky.Listener
             onRestoreInstanceState(icicle);
         }
 
-        clickColor(findViewById(R.id.black));
+        final ViewGroup colors = (ViewGroup) findViewById(R.id.colors);
+        colors.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                //Log.d(TAG, "onTouch: " + event);
+                if (event.getAction() == MotionEvent.ACTION_DOWN
+                        || event.getAction() == MotionEvent.ACTION_MOVE) {
+                    int index = (int) (event.getX() / colors.getWidth() 
+                            * colors.getChildCount());
+                    //Log.d(TAG, "touch index: " + index);
+                    if (index >= colors.getChildCount()) return false;
+                    View button = colors.getChildAt(index);
+                    clickColor(button);
+                }
+                return true;
+            }
+        });
+
+        clickColor(colors.getChildAt(0));
 
         Resources res = getResources();
         float minDiameter = res.getDimension(R.dimen.default_pen_size_min);
@@ -184,7 +226,9 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     }
 
     public void clickSave(View v) {
+        v.setEnabled(false);
         String fn = saveDrawing(System.currentTimeMillis() + ".png");
+        v.setEnabled(true);
         if (fn != null) {
             Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
         }

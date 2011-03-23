@@ -80,7 +80,8 @@
             />
     </LinearLayout>
 
-    <LinearLayout
+    <view
+    	class="com.android.slate.SlateActivity$ColorList"
         android:id="@+id/colors"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_bar_height"
@@ -89,13 +90,13 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:background="#80606060"
+        android:clickable="true"
         >
         <Button
             android:id="@+id/black"
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF000000"
             android:layout_gravity="center"
             android:textColor="#FFFFFFFF"
@@ -105,7 +106,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFFFFFFF"
             android:layout_gravity="center"
             />
@@ -115,7 +115,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFC0C0C0"
             android:layout_gravity="center"
             />
@@ -124,7 +123,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF808080"
             android:layout_gravity="center"
             />
@@ -133,7 +131,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF404040"
             android:layout_gravity="center"
             />
@@ -143,7 +140,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFFF0000"
             android:layout_gravity="center"
             />
@@ -152,7 +148,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF00FF00"
             android:layout_gravity="center"
             />
@@ -161,7 +156,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF0000FF"
             android:layout_gravity="center"
             />
@@ -171,7 +165,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFFF00CC"
             android:layout_gravity="center"
             />
@@ -180,7 +173,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFFF8000"
             android:layout_gravity="center"
             />
@@ -189,7 +181,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FFFFFF00"
             android:layout_gravity="center"
             />
@@ -198,7 +189,6 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF6000A0"
             android:layout_gravity="center"
             />
@@ -207,9 +197,8 @@
             android:layout_width="match_parent"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:onClick="clickColor"
             android:background="#FF804000"
             android:layout_gravity="center"
             />
-    </LinearLayout>
+    </view>
 </RelativeLayout>
