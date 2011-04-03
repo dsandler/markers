@@ -131,7 +131,7 @@ public class Slate extends View {
             mCoordBuffer.add(pt, time);
         }
 
-        public void drawPoint(float x, float y, float pressure, float width) {
+        public void drawPoint(float x, float y, float pressure, float width, long time) {
     //        Log.i("TouchPaint", "Drawing: " + x + "x" + y + " p="
     //                + pressure + " width=" + width);
             mLastPressure = pressure;

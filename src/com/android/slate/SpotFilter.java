@@ -9,7 +9,7 @@ public class SpotFilter {
     public static boolean DEBUG = true;
 
     public static interface Stroker {
-        public void drawPoint(float x, float y, float pressure, float width);
+        public void drawPoint(float x, float y, float pressure, float size, long time);
     }
 
     LinkedList<Spot> mSpots;
@@ -30,6 +30,7 @@ public class SpotFilter {
 
         float wi = 1, w = 0;
         float x = 0, y = 0, pressure = 0, size = 0;
+        long time = 0;
         Spot pi;
         Iterator<Spot> iter = mSpots.descendingIterator();
         while (iter.hasNext()) {
@@ -39,6 +40,7 @@ public class SpotFilter {
             pressure += pi.pressure * wi;
             size += pi.size * wi;
             w += wi;
+            time += pi.time * wi;
 
             wi *= mDecay; // exponential backoff
         }
@@ -47,6 +49,7 @@ public class SpotFilter {
         out.y = y / w;
         out.pressure = pressure / w;
         out.size = size / w;
+        out.time = time;
         return out;
     }
 
@@ -66,7 +69,7 @@ public class SpotFilter {
         mSpots.add(c);
 
         tmpSpot = filteredOutput(tmpSpot);
-        mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size);
+        mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
     }
 
     public void add(MotionEvent.PointerCoords[] cv, long time) {
@@ -79,7 +82,7 @@ public class SpotFilter {
         while (mSpots.size() > 0) {
             tmpSpot = filteredOutput(tmpSpot);
             mSpots.removeFirst();
-            mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size);
+            mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
         }
 
         mSpots.clear();
