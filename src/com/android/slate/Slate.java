@@ -75,8 +75,8 @@ public class Slate extends View {
     private Canvas mDrawingCanvas, mStrokeCanvas;
     private final Paint mDebugPaints[] = new Paint[10];
 
-    private class StrokeState implements CoordBuffer.Stroker {
-        private CoordBuffer mCoordBuffer;
+    private class StrokeState implements SpotFilter.Stroker {
+        private SpotFilter mCoordBuffer;
         private float mLastX = 0, mLastY = 0, mLastLen = 0, mLastR = -1;
         private float mTan[] = new float[2];
 
@@ -87,7 +87,7 @@ public class Slate extends View {
         private PathMeasure mWorkPathMeasure = new PathMeasure();
 
         public StrokeState() {
-            mCoordBuffer = new CoordBuffer(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
+            mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
 
             mPaint = new Paint();
             mPaint.setAntiAlias(true);
@@ -127,8 +127,8 @@ public class Slate extends View {
             mLastR = -1;
         }
 
-        public void addCoords(MotionEvent.PointerCoords pt) {
-            mCoordBuffer.add(pt);
+        public void addCoords(MotionEvent.PointerCoords pt, long time) {
+            mCoordBuffer.add(pt, time);
         }
 
         public void drawPoint(float x, float y, float pressure, float width) {
@@ -456,6 +456,7 @@ public class Slate extends View {
         int action = event.getActionMasked();
         int N = event.getHistorySize();
         int P = event.getPointerCount();
+        long time = event.getEventTime();
 
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
@@ -465,11 +466,11 @@ public class Slate extends View {
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
             int j = event.getActionIndex();
             event.getPointerCoords(j, mTmpCoords);
-            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords);
+            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             int j = event.getActionIndex();
             event.getPointerCoords(j, mTmpCoords);
-            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords);
+            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
             mStrokes[event.getPointerId(j)].finish();
         } else if (action == MotionEvent.ACTION_MOVE) {
             if (dbgX >= 0) {
@@ -487,7 +488,7 @@ public class Slate extends View {
                         dbgY = mTmpCoords.y;
                         dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                     }
-                    mStrokes[event.getPointerId(j)].addCoords(mTmpCoords);
+                    mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
                 }
             }
             for (int j = 0; j < P; j++) {
@@ -500,7 +501,7 @@ public class Slate extends View {
                     dbgY = mTmpCoords.y;
                     dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                 }
-                mStrokes[event.getPointerId(j)].addCoords(mTmpCoords);
+                mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
             }
 
             if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
