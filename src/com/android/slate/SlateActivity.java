@@ -4,12 +4,15 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -77,13 +80,23 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     }
     
     @Override
+    public Object onRetainNonConfigurationInstance() {
+    	((ViewGroup)mSlate.getParent()).removeView(mSlate);
+        return mSlate;
+    }
+    
+    @Override
     public void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
         mShaky = new MrShaky(this, this);
 
         setContentView(R.layout.main);
-        mSlate = (Slate) findViewById(R.id.slate);
+        mSlate = (Slate) getLastNonConfigurationInstance();
+        if (mSlate == null) {
+        	mSlate = new Slate(this);
+        }
+        ((ViewGroup)findViewById(R.id.root)).addView(mSlate, 0);
     
         if (icicle != null) {
             onRestoreInstanceState(icicle);
@@ -142,7 +155,20 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     @Override
     public void onResume() {
         super.onResume();
+        setRequestedOrientation(
+        	(Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+        		? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        		: ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         mShaky.resume();
+    }
+    
+    @Override
+    public void onConfigurationChanged (Configuration newConfig) {
+    	super.onConfigurationChanged(newConfig);
+//    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+//            setContentView(R.layout.main);
+//            findViewById
+//    	}
     }
 
     @Override
@@ -157,6 +183,8 @@ public class SlateActivity extends Activity implements MrShaky.Listener
         super.onStop();
         
         saveDrawing(WIP_FILENAME);
+        mSlate.recycle();
+        
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor prefsE = prefs.edit();
         float[] range = new float[2];

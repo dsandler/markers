@@ -14,6 +14,7 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.PorterDuff;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -42,7 +43,7 @@ public class Slate extends View {
     private static final boolean WALK_PATHS = true;
     private static final float WALK_STEP_PX = 3.0f;
 
-    private static final int SMOOTHING_FILTER_WLEN = 3;
+    private static final int SMOOTHING_FILTER_WLEN = 4;
     private static final float SMOOTHING_FILTER_DECAY = 0.75f;
 
     private static final int FIXED_DIMENSION = 0; // 1024;
@@ -129,6 +130,10 @@ public class Slate extends View {
 
         public void addCoords(MotionEvent.PointerCoords pt, long time) {
             mCoordBuffer.add(pt, time);
+        }
+        
+        public void add(Spot s) {
+        	mCoordBuffer.add(s);
         }
 
         public void drawPoint(float x, float y, float pressure, float width, long time) {
@@ -254,8 +259,19 @@ public class Slate extends View {
 
     private StrokeState[] mStrokes = new StrokeState[MAX_POINTERS];
 
+    Spot mTmpSpot = new Spot();
+    
     public Slate(Context c, AttributeSet as) {
         super(c, as);
+        init();
+    }
+    
+    public Slate(Context c) {
+    	super(c);
+    	init();
+    }
+    
+    private void init() {
         for (int i=0; i<mStrokes.length; i++) {
             mStrokes[i] = new StrokeState();
         }
@@ -294,14 +310,25 @@ public class Slate extends View {
         r[1] = mPressureMax;
         return r;
     }
+    
+    public void recycle() {
+    	// WARNING: the slate will not be usable until you call load() or clear() or something
+    	if (mDrawingBitmap != null) {
+	    	mDrawingBitmap.recycle(); 
+	    	mDrawingBitmap = null;
+    	}
+    	if (mStrokeBitmap != null) {
+	    	mStrokeBitmap.recycle();
+	        mStrokeBitmap = null;
+    	}
+    }
 
     public void clear() {
 //        if (mDrawingCanvas != null) {
 //            mDrawingCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
 //            invalidate();
 //        }
-        mDrawingBitmap.recycle(); mStrokeBitmap.recycle();
-        mDrawingBitmap = mStrokeBitmap = null;
+    	recycle();
         onSizeChanged(getWidth(), getHeight(), 0, 0);
         invalidate();
     }
@@ -450,7 +477,11 @@ public class Slate extends View {
 
     float dbgX = -1, dbgY = -1;
     RectF dbgRect = new RectF();
-    MotionEvent.PointerCoords mTmpCoords = new MotionEvent.PointerCoords();
+    
+    static boolean hasPointerCoords() {
+    	return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR_MR1);
+    }
+    
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
@@ -463,15 +494,20 @@ public class Slate extends View {
             commitStroke();
         }
 
-        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
+        		|| action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             int j = event.getActionIndex();
-            event.getPointerCoords(j, mTmpCoords);
-            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
-        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
-            int j = event.getActionIndex();
-            event.getPointerCoords(j, mTmpCoords);
-            mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
-            mStrokes[event.getPointerId(j)].finish();
+        	mTmpSpot.update(
+        			event.getX(j),
+        			event.getY(j),
+        			event.getSize(j),
+        			event.getPressure(j),
+        			time
+        			);
+    		mStrokes[event.getPointerId(j)].add(mTmpSpot);
+        	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
+	            mStrokes[event.getPointerId(j)].finish();
+        	}
         } else if (action == MotionEvent.ACTION_MOVE) {
             if (dbgX >= 0) {
                 dbgRect.set(dbgX-1,dbgY-1,dbgX+1,dbgY+1);
@@ -479,29 +515,41 @@ public class Slate extends View {
 
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < P; j++) {
-                    event.getHistoricalPointerCoords(j, i, mTmpCoords);
+                	mTmpSpot.update(
+                			event.getHistoricalX(j, i),
+                			event.getHistoricalY(j, i),
+                			event.getHistoricalSize(j, i),
+                			event.getHistoricalPressure(j, i),
+                			event.getHistoricalEventTime(i)
+                			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
-                            mStrokeCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                            mStrokeCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                         }
-                        dbgX = mTmpCoords.x;
-                        dbgY = mTmpCoords.y;
+                        dbgX = mTmpSpot.x;
+                        dbgY = mTmpSpot.y;
                         dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                     }
-                    mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
+                    mStrokes[event.getPointerId(j)].add(mTmpSpot);
                 }
             }
             for (int j = 0; j < P; j++) {
-                event.getPointerCoords(j, mTmpCoords);
+            	mTmpSpot.update(
+            			event.getX(j),
+            			event.getY(j),
+            			event.getSize(j),
+            			event.getPressure(j),
+            			time
+            			);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
-                        mStrokeCanvas.drawLine(dbgX, dbgY, mTmpCoords.x, mTmpCoords.y, mDebugPaints[3]);
+                        mStrokeCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                     }
-                    dbgX = mTmpCoords.x;
-                    dbgY = mTmpCoords.y;
+                    dbgX = mTmpSpot.x;
+                    dbgY = mTmpSpot.y;
                     dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                 }
-                mStrokes[event.getPointerId(j)].addCoords(mTmpCoords, time);
+                mStrokes[event.getPointerId(j)].add(mTmpSpot);
             }
 
             if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {

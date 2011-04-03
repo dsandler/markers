@@ -12,7 +12,7 @@ public class SpotFilter {
         public void drawPoint(float x, float y, float pressure, float size, long time);
     }
 
-    LinkedList<Spot> mSpots;
+    LinkedList<Spot> mSpots; // NOTE: newest now at front
     int mBufSize;
     Stroker mStroker;
     Spot tmpSpot = new Spot();
@@ -31,10 +31,7 @@ public class SpotFilter {
         float wi = 1, w = 0;
         float x = 0, y = 0, pressure = 0, size = 0;
         long time = 0;
-        Spot pi;
-        Iterator<Spot> iter = mSpots.descendingIterator();
-        while (iter.hasNext()) {
-            pi = iter.next();
+        for (Spot pi : mSpots) {
             x += pi.x * wi;
             y += pi.y * wi;
             pressure += pi.pressure * wi;
@@ -63,10 +60,10 @@ public class SpotFilter {
     
     protected void addNoCopy(Spot c) {
         if (mSpots.size() == mBufSize) {
-            mSpots.removeFirst();
+            mSpots.removeLast();
         }
 
-        mSpots.add(c);
+        mSpots.add(0, c);
 
         tmpSpot = filteredOutput(tmpSpot);
         mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
@@ -81,7 +78,7 @@ public class SpotFilter {
     public void finish() {
         while (mSpots.size() > 0) {
             tmpSpot = filteredOutput(tmpSpot);
-            mSpots.removeFirst();
+            mSpots.removeLast();
             mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
         }
 

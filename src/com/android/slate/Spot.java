@@ -9,6 +9,10 @@ public class Spot {
 	public long time; // ms, in SystemClock.currentThreadTimeMillis base
 	
 	public Spot(float _x, float _y, float _s, float _p, long _t) {
+		update(_x, _y, _s, _p, _t);
+	}
+	
+	public void update(float _x, float _y, float _s, float _p, long _t) {
 		x = _x;
 		y = _y;
 		size = _s;
