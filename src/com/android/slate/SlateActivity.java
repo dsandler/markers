@@ -231,6 +231,10 @@ public class SlateActivity extends Activity implements MrShaky.Listener
     public String saveDrawing(String filename) {
         String fn = null;
         Bitmap bits = mSlate.getBitmap();
+        if (bits == null) {
+            Log.e(TAG, "save: null bitmap");
+            return null;
+        }
 
         try {
             File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
@@ -248,7 +252,7 @@ public class SlateActivity extends Activity implements MrShaky.Listener
                     new String[] { fn }, null, null
                     );
         } catch (IOException e) {
-            Log.d(TAG, "save: error: " + e);
+            Log.e(TAG, "save: error: " + e);
         }
         return fn;
     }

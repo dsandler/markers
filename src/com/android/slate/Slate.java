@@ -345,6 +345,7 @@ public class Slate extends View {
     }
 
     public void commitStroke() {
+        if (mDrawingCanvas == null) return;
         mDrawingCanvas.drawBitmap(mStrokeBitmap, 0, 0, null);
         mStrokeCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
     }
