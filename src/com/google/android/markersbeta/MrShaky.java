@@ -1,4 +1,4 @@
-package com.android.slate;
+package com.google.android.markersbeta;
 
 import android.content.Context;
 import android.hardware.Sensor;

@@ -29,7 +29,7 @@ import android.view.View;
 public class Slate extends View {
 
     static final boolean DEBUG = true;
-    static final String TAG = SlateActivity.TAG + "/Slate";
+    static final String TAG = "Slate";
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;

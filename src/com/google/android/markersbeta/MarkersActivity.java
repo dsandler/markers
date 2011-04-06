@@ -1,4 +1,4 @@
-package com.android.slate;
+package com.google.android.markersbeta;
 
 import android.app.Activity;
 import android.content.Context;
@@ -34,7 +34,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class SlateActivity extends Activity implements MrShaky.Listener
+import com.android.slate.Slate;
+
+public class MarkersActivity extends Activity implements MrShaky.Listener
 {
     final static int LOAD_IMAGE = 1000;
 
