@@ -76,7 +76,7 @@
     </LinearLayout>
 
     <view
-    	class="com.android.slate.SlateActivity$ColorList"
+        class="com.google.android.markersbeta.MarkersActivity$ColorList"
         android:id="@+id/colors"
         android:layout_width="match_parent"
         android:layout_height="@dimen/button_bar_height"
