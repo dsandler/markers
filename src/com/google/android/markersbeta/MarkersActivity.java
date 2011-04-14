@@ -22,6 +22,7 @@ import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -216,16 +217,33 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     protected void onRestoreInstanceState(Bundle icicle) {
     }
-    
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_MENU) {
+            setActionBarVisibility(!getActionBarVisibility());
+            return true;
+        }
+        return false;
+    }
+
     final static boolean hasAnimations() {
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
     }
     
     public void clickLogo(View v) {
+        setActionBarVisibility(!getActionBarVisibility());
+    }
+
+    public boolean getActionBarVisibility() {
+        final View bar = findViewById(R.id.actionbar_contents);
+        return bar.getVisibility() == View.VISIBLE;
+    }
+
+    public void setActionBarVisibility(boolean show) {
         final View bar = findViewById(R.id.actionbar_contents);
         final View logo = findViewById(R.id.logo);
-        boolean showing = bar.getVisibility() == View.VISIBLE;
-        if (showing) {
+        if (!show) {
             if (hasAnimations()) {
                 ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f).start();
                 ObjectAnimator.ofFloat(bar, "translationY", 0f, -20f).start();
