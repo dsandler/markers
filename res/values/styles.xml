@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ActionBar.Button" parent="@android:style/Widget.Button.Small">
+            <item name="android:background">#60000000</item>
+            <item name="android:textColor">#FFFFFFFF</item>
+            <item name="android:textSize">@dimen/ui_font_size</item>
+            <item name="android:layout_margin">2dp</item>
+            <item name="android:paddingLeft">8dp</item>
+            <item name="android:paddingRight">8dp</item>
+    </style>
+</resources>

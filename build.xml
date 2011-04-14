@@ -80,5 +80,17 @@
              - customize to your needs.
     -->
     <setup />
+	<target name="bazaar-upload" depends="release">
+		<property name="bazaar.id" value="9776275" />
+		<exec dir="." executable="scp">
+			<arg file="bin/Markers-release.apk" />
+			<arg value="sh.corp.google.com:/tmp/Markers-bazaar.apk" />
+		</exec>
+		<exec dir="." executable="ssh">
+			<arg value="sh.corp.google.com" />
+			<arg value="(prodcertstatus || prodaccess) && /google/data/ro/projects/bazaar/bazaar_tool.par update ${bazaar.id} /tmp/Markers-bazaar.apk ; rm /tmp/Markers-bazaar.apk" />
+		</exec>
+	</target>
+
 
 </project>

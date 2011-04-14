@@ -1,5 +1,8 @@
 package com.google.android.markersbeta;
 
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -212,6 +215,38 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     @Override
     protected void onRestoreInstanceState(Bundle icicle) {
+    }
+    
+    final static boolean hasAnimations() {
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
+    }
+    
+    public void clickLogo(View v) {
+        final View bar = findViewById(R.id.actionbar_contents);
+        final View logo = findViewById(R.id.logo);
+        boolean showing = bar.getVisibility() == View.VISIBLE;
+        if (showing) {
+            if (hasAnimations()) {
+                ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f).start();
+                ObjectAnimator.ofFloat(bar, "translationY", 0f, -20f).start();
+                Animator a = ObjectAnimator.ofFloat(bar, "alpha", 1f, 0f);
+                a.addListener(new AnimatorListenerAdapter() {
+                    public void onAnimationEnd(Animator a) {
+                        bar.setVisibility(View.GONE);
+                    }
+                });
+                a.start();
+            } else {
+                bar.setVisibility(View.GONE);
+            }
+        } else {
+            bar.setVisibility(View.VISIBLE);
+            if (hasAnimations()) {
+                ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f).start();
+                ObjectAnimator.ofFloat(bar, "translationY", -20f, 0f).start();
+                ObjectAnimator.ofFloat(bar, "alpha", 0f, 1f).start();
+            }
+        }
     }
 
     public void clickClear(View v) {
