@@ -2,4 +2,5 @@
 <resources>
     <dimen name="button_bar_height">48dp</dimen>
     <dimen name="ui_font_size">20sp</dimen>
+    <dimen name="action_bar_height">56dip</dimen><dimen name="action_bar_logo_width">80dip</dimen>
 </resources>
