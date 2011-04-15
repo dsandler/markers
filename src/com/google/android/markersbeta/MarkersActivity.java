@@ -224,7 +224,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             setActionBarVisibility(!getActionBarVisibility());
             return true;
         }
-        return false;
+        return super.onKeyDown(keyCode, event);
     }
 
     final static boolean hasAnimations() {
