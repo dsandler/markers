@@ -43,8 +43,8 @@ public class Slate extends View {
     private static final boolean WALK_PATHS = true;
     private static final float WALK_STEP_PX = 3.0f;
 
-    private static final int SMOOTHING_FILTER_WLEN = 4;
-    private static final float SMOOTHING_FILTER_DECAY = 0.75f;
+    private static final int SMOOTHING_FILTER_WLEN = 6;
+    private static final float SMOOTHING_FILTER_DECAY = 0.7f;
 
     private static final int FIXED_DIMENSION = 0; // 1024;
 
@@ -56,10 +56,12 @@ public class Slate extends View {
     private float mPressureMax = 1;
 
     public static final float PRESSURE_UPDATE_DECAY = 0.1f;
-    public static final int PRESSURE_UPDATE_STEPS = 500; // points
+    public static final int PRESSURE_UPDATE_STEPS_FIRSTBOOT = 100; // points, a quick-training regimen
+    public static final int PRESSURE_UPDATE_STEPS_NORMAL = 1000; // points, in normal use
+    private int mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
+    private int mPressureUpdateCountdown = mPressureCountdownStart;
     private float mPressureRecentMin = 1;
     private float mPressureRecentMax = 0;
-    private int mPressureUpdateCountdown = PRESSURE_UPDATE_STEPS;
 
     private float mRadiusMin;
     private float mRadiusMax;
@@ -113,7 +115,7 @@ public class Slate extends View {
         }
 
         public void setDebugMode(boolean debug) {
-            setPenColor(getPenColor() & 0xFFFFFF | (debug ? 0x80FFFFFF : 0xFFFFFFFF));
+            setPenColor(getPenColor() & 0x00FFFFFF | (debug ? 0x40000000 : 0xFF000000));
             mPaint.setStyle(debug ? Paint.Style.STROKE : Paint.Style.FILL);
             invalidate();
         }
@@ -147,9 +149,18 @@ public class Slate extends View {
                 final float decay = PRESSURE_UPDATE_DECAY;
                 mPressureMin = (1-decay) * mPressureMin + decay * mPressureRecentMin;
                 mPressureMax = (1-decay) * mPressureMax + decay * mPressureRecentMax;
-                mPressureUpdateCountdown = PRESSURE_UPDATE_STEPS;
+
+                // upside-down values, will be overwritten on the next point
                 mPressureRecentMin = 1;
                 mPressureRecentMax = 0;
+
+                // walk the countdown up to the maximum value
+                if (mPressureCountdownStart < PRESSURE_UPDATE_STEPS_NORMAL) {
+                    mPressureCountdownStart = (int) (mPressureCountdownStart * 1.5f);
+                    if (mPressureCountdownStart > PRESSURE_UPDATE_STEPS_NORMAL)
+                        mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
+                }
+                mPressureUpdateCountdown = mPressureCountdownStart;
             }
 
             final float pressureNorm = (pressure - mPressureMin)
@@ -163,7 +174,9 @@ public class Slate extends View {
             }
 
             if (mStrokeBitmap != null) {
-                if (!WALK_PATHS || mLastR < 0) {
+                if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
+                    mStrokeCanvas.drawCircle(x, y, r, mDebugPaints[1]);
+                } else if (!WALK_PATHS || mLastR < 0) {
                     // poke!
                     mStrokeCanvas.drawCircle(x, y, r, mPaint);
                 }
@@ -234,7 +247,9 @@ public class Slate extends View {
     //                    mStrokeCanvas.drawLine(controlX, controlY, x, y, mDebugPaints[0]);
                         mStrokeCanvas.drawLine(mLastX, mLastY, x, y, mDebugPaints[1]);
                         mStrokeCanvas.drawPath(p, mDebugPaints[2]);
-                        mStrokeCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
+                        if (!WALK_PATHS) {
+                            mStrokeCanvas.drawPoint(controlX, controlY, mDebugPaints[0]);
+                        }
                     }
                 }
 
@@ -298,6 +313,14 @@ public class Slate extends View {
     public void setPenSize(float min, float max) {
         mRadiusMin = min * 0.5f;
         mRadiusMax = max * 0.5f;
+    }
+
+    public void setFirstRun(boolean firstRun) {
+        // "Why do my eyes hurt?"
+        // "You've never used them before."
+        if (firstRun) {
+            mPressureUpdateCountdown = mPressureCountdownStart = PRESSURE_UPDATE_STEPS_FIRSTBOOT;
+        }
     }
 
     public void setPressureRange(float min, float max) {
@@ -462,16 +485,21 @@ public class Slate extends View {
             if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
                 StringBuffer strokeInfo = new StringBuffer();
                 for (StrokeState st : mStrokes) {
-                    strokeInfo.append(String.format("[%.1f] ", st.getRadius()));
+                    final float r = st.getRadius();
+                    strokeInfo.append(
+                        (r < 0)
+                            ? "[-] "
+                            : String.format("[%.1f] ", r));
                 }
 
                 canvas.drawText(
-                        String.format("p: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f)", 
+                        String.format("p: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d", 
                             mLastPressure,
                             mPressureMin, mPressureMax,
-                            mPressureRecentMin, mPressureRecentMax),
-                        2, 32, mDebugPaints[4]);
-                canvas.drawText(strokeInfo.toString(), 2, 48, mDebugPaints[4]);
+                            mPressureRecentMin, mPressureRecentMax,
+                            mPressureUpdateCountdown),
+                        2, canvas.getHeight() - 64, mDebugPaints[4]);
+                canvas.drawText(strokeInfo.toString(), 2, canvas.getHeight() - 52, mDebugPaints[4]);
             }
         }
     }

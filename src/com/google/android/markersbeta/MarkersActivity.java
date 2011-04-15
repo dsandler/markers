@@ -55,7 +55,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     private static final String PREF_MAX_DIAMETER = "max_diameter";
     private static final String PREF_PRESSURE_MIN = "pressure_min";
     private static final String PREF_PRESSURE_MAX = "pressure_max";
-    
+    private static final String PREF_FIRST_RUN = "first_run";
+
     private static final float DEF_PRESSURE_MIN = 0.2f;
     private static final float DEF_PRESSURE_MAX = 0.9f;
 
@@ -84,13 +85,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             return true;
         }
     }
-    
+
     @Override
     public Object onRetainNonConfigurationInstance() {
     	((ViewGroup)mSlate.getParent()).removeView(mSlate);
         return mSlate;
     }
-    
+
     @Override
     public void onCreate(Bundle icicle)
     {
@@ -103,7 +104,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         	mSlate = new Slate(this);
         }
         ((ViewGroup)findViewById(R.id.root)).addView(mSlate, 0);
-    
+
         if (icicle != null) {
             onRestoreInstanceState(icicle);
         }
@@ -132,15 +133,18 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         float minDiameter = res.getDimension(R.dimen.default_pen_size_min);
         float maxDiameter = res.getDimension(R.dimen.default_pen_size_max);
 
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
-        
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+
         minDiameter = prefs.getFloat(PREF_MIN_DIAMETER, minDiameter);
         maxDiameter = prefs.getFloat(PREF_MAX_DIAMETER, maxDiameter);
         mSlate.setPenSize(minDiameter, maxDiameter);
-        
+
         float pMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
         float pMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
         mSlate.setPressureRange(pMin, pMax);
+
+        final boolean firstRun = prefs.getBoolean(PREF_FIRST_RUN, true);
+        mSlate.setFirstRun(firstRun);
     }
 
     // MrShaky.Listener
@@ -156,6 +160,17 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void onPause() {
         super.onPause();
         mShaky.pause();
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+        SharedPreferences.Editor prefsE = prefs.edit();
+        prefsE.putBoolean(PREF_FIRST_RUN, false);
+
+        float[] range = new float[2];
+        mSlate.getPressureRange(range);
+        prefsE.putFloat(PREF_PRESSURE_MIN, range[0]);
+        prefsE.putFloat(PREF_PRESSURE_MAX, range[1]);
+
+        prefsE.commit();
     }
 
     @Override
@@ -167,7 +182,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         		: ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         mShaky.resume();
     }
-    
+
     @Override
     public void onConfigurationChanged (Configuration newConfig) {
     	super.onConfigurationChanged(newConfig);
@@ -187,17 +202,9 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     protected void onStop() {
         super.onStop();
-        
+
         saveDrawing(WIP_FILENAME);
         mSlate.recycle();
-        
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
-        SharedPreferences.Editor prefsE = prefs.edit();
-        float[] range = new float[2];
-        mSlate.getPressureRange(range);
-        prefsE.putFloat(PREF_PRESSURE_MIN, range[0]);
-        prefsE.putFloat(PREF_PRESSURE_MAX, range[1]);
-        prefsE.commit();
     }
 
     @Override
@@ -230,7 +237,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     final static boolean hasAnimations() {
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
     }
-    
+
     public void clickLogo(View v) {
         setActionBarVisibility(!getActionBarVisibility());
     }
@@ -398,5 +405,5 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             }
         }
     }
-    
+
 }

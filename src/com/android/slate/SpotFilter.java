@@ -36,8 +36,9 @@ public class SpotFilter {
             y += pi.y * wi;
             pressure += pi.pressure * wi;
             size += pi.size * wi;
-            w += wi;
             time += pi.time * wi;
+
+            w += wi;
 
             wi *= mDecay; // exponential backoff
         }
