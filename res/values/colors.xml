@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="btn_bg">#33000000</color>
+    <color name="btn_pressed_bg">#CCFFCC00</color>
+    <color name="btn_selected_bg">#AA000000</color>
+    <color name="btn_fg">#FF555555</color>
+    <color name="btn_pressed_fg">#FF555555</color>
+    <color name="btn_selected_fg">#FFCCCCCC</color>
+</resources>

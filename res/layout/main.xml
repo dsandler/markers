@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout 
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.markersbeta"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
@@ -10,7 +12,14 @@
 		android:layout_width="match_parent"
 		android:layout_height="@dimen/action_bar_height"
 		/>
-
+		
+	<include layout="@layout/tools"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_alignParentLeft="true"
+		android:layout_centerVertical="true"
+		/>
+		
     <view
         class="com.google.android.markersbeta.MarkersActivity$ColorList"
         android:id="@+id/colors"

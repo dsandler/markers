@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="PenToolButton">
+        <attr name="strokeWidthMax" format="dimension" />
+        <attr name="strokeWidthMin" format="dimension" />
+        <attr name="interpolator" format="reference" />
+    </declare-styleable>
+    <declare-styleable name="ColorSwatchButton">
+        <attr name="color" format="color" />
+    </declare-styleable>
+</resources>

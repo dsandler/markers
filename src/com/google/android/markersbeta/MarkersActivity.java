@@ -75,6 +75,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     boolean mJustLoadedImage = false;
 
+    protected PenToolButton mLastTool, mActiveTool;
+
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
             super(c, as);
@@ -141,7 +143,57 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         float pMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
         float pMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
         mSlate.setPressureRange(pMin, pMax);
-    }
+        
+        final PenToolButton penThinButton = (PenToolButton) findViewById(R.id.pen_thin);
+        penThinButton.setCallback(new PenToolButton.PenToolCallback() {
+            @Override
+            public void setPenSize(float min, float max) {
+                mSlate.setPenSize(min, max);
+                mLastTool = mActiveTool;
+                mLastTool.setSelected(false);
+                mActiveTool = penThinButton;
+            }
+            @Override
+            public void restorePenSize() {
+                mLastTool.select();
+            }
+        });
+        
+        final PenToolButton penMediumButton = (PenToolButton) findViewById(R.id.pen_medium);
+        if (penMediumButton != null) {
+            penMediumButton.setCallback(new PenToolButton.PenToolCallback() {
+                @Override
+                public void setPenSize(float min, float max) {
+                    mSlate.setPenSize(min, max);
+                    mLastTool = mActiveTool;
+                    mLastTool.setSelected(false);
+                    mActiveTool = penMediumButton;
+                }
+                @Override
+                public void restorePenSize() {
+                    mLastTool.select();
+                }
+            });
+        }
+        
+        final PenToolButton penThickButton = (PenToolButton) findViewById(R.id.pen_thick);
+        penThickButton.setCallback(new PenToolButton.PenToolCallback() {
+            @Override
+            public void setPenSize(float min, float max) {
+                mSlate.setPenSize(min, max);
+                mLastTool = mActiveTool;
+                mLastTool.setSelected(false);
+                mActiveTool = penThickButton;
+            }
+            @Override
+            public void restorePenSize() {
+                mLastTool.select();
+            }
+        });
+        
+        mLastTool = mActiveTool = penThickButton;
+        penThickButton.select();
+   }
 
     // MrShaky.Listener
     public void onShake() {
