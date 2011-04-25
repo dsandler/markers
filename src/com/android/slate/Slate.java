@@ -223,7 +223,7 @@ public class Slate extends View {
                             mRect.union(posOut[0] - ri, posOut[1] - ri, posOut[0] + ri, posOut[1] + ri);
                             
                             if (d == mLastLen) break;
-                            d += WALK_STEP_PX;
+                            d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
                         }
 
                     } else { // STROKE_PATHS
@@ -597,7 +597,7 @@ public class Slate extends View {
         return true;
     }
 
-    private static float lerp(float a, float b, float f) {
+    public static float lerp(float a, float b, float f) {
         return a + f * (b - a);
     }
 }
