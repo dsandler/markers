@@ -47,7 +47,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     static final String TAG = "Markers";
 
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
-    public static final String WIP_FILENAME = ".temporary.png";
+    public static final String IMAGE_TEMP_DIRNAME = IMAGE_SAVE_DIRNAME + "/.temporary";
+    public static final String WIP_FILENAME = "temporary.png";
 
     private static final String PREFS_NAME = "MarkersPrefs";
 
@@ -255,7 +256,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     protected void onStop() {
         super.onStop();
 
-        saveDrawing(WIP_FILENAME);
+        saveDrawing(WIP_FILENAME, true);
         mSlate.recycle();
     }
 
@@ -263,7 +264,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     protected void onStart() {
         super.onStart();
         if (!mJustLoadedImage) {
-            loadDrawing(WIP_FILENAME);
+            loadDrawing(WIP_FILENAME, true);
         } else {
             mJustLoadedImage = false;
         }
@@ -330,19 +331,26 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         mSlate.clear();
     }
 
-    public void loadDrawing(String filename) {
+    public boolean loadDrawing(String filename) {
+        return loadDrawing(filename, false);
+    }
+    public boolean loadDrawing(String filename, boolean temporary) {
         File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        d = new File(d, IMAGE_SAVE_DIRNAME);
-        if (!d.exists()) {
-            return;
+        d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
+        if (d.exists()) {
+            Bitmap bits = BitmapFactory.decodeFile(new File(d, filename).toString());
+            if (bits != null) {
+                mSlate.setBitmap(bits);
+                return true;
+            }
         }
-        Bitmap bits = BitmapFactory.decodeFile(new File(d, filename).toString());
-        if (bits != null) {
-            mSlate.setBitmap(bits);
-        }
+        return false;
     }
 
     public String saveDrawing(String filename) {
+        return saveDrawing(filename, false);
+    }
+    public String saveDrawing(String filename, boolean temporary) {
         String fn = null;
         Bitmap bits = mSlate.getBitmap();
         if (bits == null) {
@@ -352,9 +360,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
         try {
             File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            d = new File(d, IMAGE_SAVE_DIRNAME);
+            d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
             if (!d.exists()) {
-                if (!d.mkdirs()) { throw new IOException("cannot create dirs: " + d); }
+                if (d.mkdirs()) {
+                    new FileOutputStream(new File(d, ".nomedia")).write('\n');
+                } else {
+                    throw new IOException("cannot create dirs: " + d);
+                }
             }
             File file = new File(d, filename);
             Log.d(TAG, "save: saving " + file);
@@ -362,9 +374,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             bits.compress(Bitmap.CompressFormat.PNG, 0, os);
             os.close();
             fn = file.toString();
-            MediaScannerConnection.scanFile(this,
-                    new String[] { fn }, null, null
-                    );
+            if (!temporary) {
+                MediaScannerConnection.scanFile(this,
+                        new String[] { fn }, null, null
+                        );
+            }
         } catch (IOException e) {
             Log.e(TAG, "save: error: " + e);
         }
@@ -377,6 +391,19 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         v.setEnabled(true);
         if (fn != null) {
             Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void clickShare(View v) {
+        v.setEnabled(false);
+        String fn = saveDrawing("from_markers.png", true);
+        v.setEnabled(true);
+        if (fn != null) {
+            Uri streamUri = Uri.fromFile(new File(fn));
+            Intent sendIntent = new Intent(Intent.ACTION_SEND);
+            sendIntent.setType("image/jpeg");
+            sendIntent.putExtra(Intent.EXTRA_STREAM, streamUri);
+            startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
         }
     }
 
