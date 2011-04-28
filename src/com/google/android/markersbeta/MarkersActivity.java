@@ -465,7 +465,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 Uri contentUri = imageReturnedIntent.getData();
                 Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
 
-                loadDrawing(WIP_FILENAME);
+                loadDrawing(WIP_FILENAME, true);
                 mJustLoadedImage = true;
 
                 try {
