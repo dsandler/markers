@@ -83,6 +83,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         public ColorList(Context c, AttributeSet as) {
             super(c, as);
         }
+        
+        @Override
+        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+            if (changed) setOrientation(((right-left) > (bottom-top)) ? HORIZONTAL : VERTICAL);
+        }
+
         @Override
         public boolean onInterceptTouchEvent(MotionEvent e) {
             return true;
@@ -100,7 +107,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     {
         super.onCreate(icicle);
         mShaky = new MrShaky(this, this);
-
+        
         setContentView(R.layout.main);
         mSlate = (Slate) getLastNonConfigurationInstance();
         if (mSlate == null) {
@@ -119,7 +126,12 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 //Log.d(TAG, "onTouch: " + event);
                 if (event.getAction() == MotionEvent.ACTION_DOWN
                         || event.getAction() == MotionEvent.ACTION_MOVE) {
-                    int index = (int) (event.getX() / colors.getWidth() 
+                   final boolean horizontal = (colors.getWidth() > colors.getHeight());
+
+                   int index = (int) 
+                        ((horizontal
+                                ? (event.getX() / colors.getWidth())
+                                : (event.getY() / colors.getHeight()))
                             * colors.getChildCount());
                     //Log.d(TAG, "touch index: " + index);
                     if (index >= colors.getChildCount()) return false;
