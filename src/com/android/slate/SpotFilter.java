@@ -8,20 +8,20 @@ import android.view.MotionEvent;
 public class SpotFilter {
     public static boolean DEBUG = true;
 
-    public static interface Stroker {
-        public void drawPoint(float x, float y, float pressure, float size, long time);
+    public static interface Plotter {
+        public void plot(Spot s);
     }
 
     LinkedList<Spot> mSpots; // NOTE: newest now at front
     int mBufSize;
-    Stroker mStroker;
+    Plotter mPlotter;
     Spot tmpSpot = new Spot();
     float mDecay;
 
-    public SpotFilter(int size, float decay, Stroker stroker) {
+    public SpotFilter(int size, float decay, Plotter plotter) {
         mSpots = new LinkedList<Spot>();
         mBufSize = size;
-        mStroker = stroker;
+        mPlotter = plotter;
         mDecay = (decay >= 0 && decay <= 1) ? decay : 1f;
     }
 
@@ -67,7 +67,7 @@ public class SpotFilter {
         mSpots.add(0, c);
 
         tmpSpot = filteredOutput(tmpSpot);
-        mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
+        mPlotter.plot(tmpSpot);
     }
 
     public void add(MotionEvent.PointerCoords[] cv, long time) {
@@ -80,7 +80,7 @@ public class SpotFilter {
         while (mSpots.size() > 0) {
             tmpSpot = filteredOutput(tmpSpot);
             mSpots.removeLast();
-            mStroker.drawPoint(tmpSpot.x, tmpSpot.y, tmpSpot.pressure, tmpSpot.size, tmpSpot.time);
+            mPlotter.plot(tmpSpot);
         }
 
         mSpots.clear();
