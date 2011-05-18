@@ -31,9 +31,19 @@
            android:id="@+id/pen_thick"
            android:layout_width="48dp"
            android:layout_height="96dp"
+           android:layout_marginBottom="4dp"
            android:padding="6dp"
            android:layout_weight="1"
            markers:strokeWidthMin="4dp"
            markers:strokeWidthMax="20dp"
+           />
+       <com.google.android.markersbeta.PenToolButton
+           android:id="@+id/fat_marker"
+           android:layout_width="48dp"
+           android:layout_height="96dp"
+           android:padding="6dp"
+           android:layout_weight="1"
+           markers:strokeWidthMin="20dp"
+           markers:strokeWidthMax="40dp"
            />
 </LinearLayout>

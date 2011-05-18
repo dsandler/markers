@@ -195,6 +195,21 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 mLastTool.select();
             }
         });
+
+        final PenToolButton fatMarkerButton = (PenToolButton) findViewById(R.id.fat_marker);
+        fatMarkerButton.setCallback(new PenToolButton.PenToolCallback() {
+            @Override
+            public void setPenSize(float min, float max) {
+                mSlate.setPenSize(min, max);
+                mLastTool = mActiveTool;
+                mLastTool.setSelected(false);
+                mActiveTool = fatMarkerButton;
+            }
+            @Override
+            public void restorePenSize() {
+                mLastTool.select();
+            }
+        });
         
         mLastTool = mActiveTool = penThickButton;
         penThickButton.select();
@@ -438,13 +453,17 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             case R.id.purple: color = 0xFF6000A0; break;
 
             case R.id.brown:  color = 0xFF804000; break;
+
+            case R.id.erase:  color = 0; break;
         }
         setPenColor(color);
 
         ViewGroup list = (ViewGroup) findViewById(R.id.colors);
         for (int i=0; i<list.getChildCount(); i++) {
             Button c = (Button) list.getChildAt(i);
-            c.setText(c==v?"\u25A0":"");
+            c.setText(c==v
+                ?(color==0?"E":"\u25A0")
+                :"");
         }
     }
 
