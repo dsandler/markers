@@ -4,13 +4,13 @@
 	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.markersbeta"
 	android:id="@+id/tools"
 	android:orientation="vertical"
-	android:layout_width="wrap_content"
-	android:layout_height="wrap_content"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
 	>
        <com.google.android.markersbeta.PenToolButton
            android:id="@+id/pen_thin"
-           android:layout_width="32dp"
-           android:layout_height="70dp"
+           android:layout_width="match_parent"
+           android:layout_height="match_parent"
            android:layout_marginBottom="4dp"
            android:padding="4dp"
            android:layout_weight="1"
@@ -19,8 +19,8 @@
            />
        <com.google.android.markersbeta.PenToolButton
            android:id="@+id/pen_thick"
-           android:layout_width="32dp"
-           android:layout_height="70dp"
+           android:layout_width="match_parent"
+           android:layout_height="match_parent"
            android:padding="4dp"
            android:layout_weight="1"
            markers:strokeWidthMin="4dp"

@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.os.Build;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -73,7 +74,13 @@ public class PenToolButton extends View {
                     setPressed(true);
                     invalidate();
                 }
-                return true;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                    return true;
+                } else {
+                    // FALL THROUGH.
+                    // Split touch events only appeared in Honeycomb; before this we
+                    // want to simply switch the tool on DOWN, end of story.
+                }
             case MotionEvent.ACTION_UP:
                 if (isPressed()) {
                     setPressed(false);
