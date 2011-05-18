@@ -301,17 +301,20 @@ public class Slate extends View {
         }
 
         public void strokeTo(long time, float x, float y, float r) {
-            if (mLastR >= 0) {
+            if (mLastR < 0) {
+                // always draw the first point
+                mStream.plotCircle(time, x, y, r, mPenColor);
+            } else {
                 // connect the dots, la-la-la
                 
                 Path p = mWorkPath;
                 p.reset();
                 p.moveTo(mLastX, mLastY);
 
-                float controlX = mLastX + mTan[0]*BEZIER_CONTROL_POINT_DISTANCE;
-                float controlY = mLastY + mTan[1]*BEZIER_CONTROL_POINT_DISTANCE;
-
                 if (BEZIER && (mTan[0] != 0 || mTan[1] != 0)) {
+                    float controlX = mLastX + mTan[0]*BEZIER_CONTROL_POINT_DISTANCE;
+                    float controlY = mLastY + mTan[1]*BEZIER_CONTROL_POINT_DISTANCE;
+
                     p.quadTo(controlX, controlY, x, y);
                 } else {
                     p.lineTo(x, y);
