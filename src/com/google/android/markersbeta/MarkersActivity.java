@@ -209,19 +209,21 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         });
 
         final PenToolButton fatMarkerButton = (PenToolButton) findViewById(R.id.fat_marker);
-        fatMarkerButton.setCallback(new PenToolButton.PenToolCallback() {
-            @Override
-            public void setPenSize(float min, float max) {
-                mSlate.setPenSize(min, max);
-                mLastTool = mActiveTool;
-                mLastTool.setSelected(false);
-                mActiveTool = fatMarkerButton;
-            }
-            @Override
-            public void restorePenSize() {
-                mLastTool.select();
-            }
-        });
+        if (fatMarkerButton != null) {
+            fatMarkerButton.setCallback(new PenToolButton.PenToolCallback() {
+                @Override
+                public void setPenSize(float min, float max) {
+                    mSlate.setPenSize(min, max);
+                    mLastTool = mActiveTool;
+                    mLastTool.setSelected(false);
+                    mActiveTool = fatMarkerButton;
+                }
+                @Override
+                public void restorePenSize() {
+                    mLastTool.select();
+                }
+            });
+        }
         
         mLastTool = mActiveTool = penThickButton;
         penThickButton.select();
@@ -276,7 +278,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void onAttachedToWindow() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        mSlate.setDensity(metrics.density);
+        
     }
 
     @Override

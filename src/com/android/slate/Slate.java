@@ -1,14 +1,10 @@
 package com.android.slate;
 
 import java.util.ArrayList;
-import java.util.List;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -17,16 +13,9 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.PorterDuff;
 import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -44,7 +33,6 @@ public class Slate extends View {
 
     private static final boolean BEZIER = false;
     private static final float BEZIER_CONTROL_POINT_DISTANCE=0.25f;
-    private static final boolean WALK_PATHS = true;
     private static final float WALK_STEP_PX = 3.0f;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
@@ -72,8 +60,6 @@ public class Slate extends View {
 
     private float mLastPressure;
 
-    private float mDensity = 1.0f;
-
     private int mDebugFlags = 0;
 
     private Bitmap mPreviousBitmap, mCurrentBitmap;
@@ -85,6 +71,7 @@ public class Slate extends View {
             public long time;
             
             public int kind;
+            public static final int KIND_MARK = 0;
             public static final int KIND_CIRCLE = 1;
             
             public float f0, f1, f2;
@@ -102,6 +89,12 @@ public class Slate extends View {
                 op.i1 = i1;
                 op.i2 = i2;
                 return op;
+            }
+            public String toString() {
+                return String.format("<%s @ %d : %g %g %g %d %d %d>",
+                        (kind == KIND_CIRCLE ? "cir" : "mrk"),
+                        time,
+                        f0, f1, f2, i0, i1, i2);
             }
             public void draw(Canvas c, Paint p) {
                 switch (kind) {
@@ -129,6 +122,26 @@ public class Slate extends View {
                 }
             }
         }
+        
+        public String toString() {
+            // summarize
+            String s = "[";
+            int lastKind = -1;
+            int count = 0;
+            for (DrawOp op : stream) {
+                if (op.kind != lastKind) {
+                    if (count > 0) {
+                        s += lastKind + " (" + count + "), ";
+                    }
+                    lastKind = op.kind;
+                    count = 1;
+                } else count++;
+            }
+            if (count > 0) {
+                s += lastKind + " (" + count + ")";
+            }
+            return s + "]";
+        }
 
         private ArrayList<DrawOp> stream;
         final Paint mPaint;
@@ -138,6 +151,7 @@ public class Slate extends View {
         public DrawStream() {
             stream = new ArrayList<DrawOp>(10000);
             mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mDrawingStep = 0;
         }
         public void loadFromFile() {
             // TODO
@@ -152,16 +166,52 @@ public class Slate extends View {
             stream.add(DrawOp.make(time, DrawOp.KIND_CIRCLE, x, y, r, color, 0, 0));
         }
         
-        public void rewind(int step) {
+        public void setUndoMark(long time) {
+            stream.add(DrawOp.make(time, DrawOp.KIND_MARK, 0, 0, 0, 0, 0, 0));
+        }
+        
+        public Rect undo() {
+            Log.d(TAG, "undo: stream: " + toString());
+            int i = stream.size() - 2; 
+            while (i --> 0) {
+                if (stream.get(i).kind == DrawOp.KIND_MARK) 
+                    return trunc(i+1);
+            }
+            return trunc(0);
+        }
+        
+        public Rect trunc(int step) {
+            RectF dirty = new RectF();
+            RectF dirtyDeedsDone = new RectF();
+            Log.d(TAG, "trunc will discard " + (stream.size()-step) + " steps");
+            while (step < stream.size()) {
+                DrawOp op = stream.get(step);
+                //Log.d(TAG, "trunc removing #" + (step) + ": " + op);
+                op.dirty(dirty);
+                stream.remove(step);
+            }
+            if (mDrawingStep > stream.size())
+                mDrawingStep = stream.size();
+            Rect r2 = new Rect();
+            dirtyDeedsDone.roundOut(r2);
+            return r2;
+        }
+        
+        public void setDrawingStep(int step) {
             mDrawingStep = step;
-            if (mDrawingStep < 0) mDrawingStep = 0;
-            else if (mDrawingStep >= stream.size()) mDrawingStep = stream.size()-1;
         }
         
         public Rect play(Canvas c) {
+            return play(c, stream.size()-1-mDrawingStep);
+        }
+        
+        public Rect play(Canvas c, int steps) {
+            if (mDrawingStep + steps > stream.size() - 1)
+                steps = stream.size() - 1 - mDrawingStep;
+
             RectF dirty = new RectF();
             RectF dirtyDeedsDone = new RectF();
-            while (mDrawingStep < stream.size()) {
+            while (steps-- > 0) {
                 DrawOp op = stream.get(mDrawingStep++);
                 dirty.setEmpty();
                 op.dirty(dirty);
@@ -176,7 +226,7 @@ public class Slate extends View {
         }
         
         public void clear() {
-            mDrawingStep = -1;
+            mDrawingStep = 0;
             stream.clear();
         }
     }
@@ -245,16 +295,16 @@ public class Slate extends View {
             mRenderer.strokeTo(s.time, s.x, s.y, radius);
             
             Rect dirty = mStream.play(mCurrentCanvas);
+            dirty.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
             invalidate(dirty);
-     }
+        }
         
         public void setPenColor(int color) {
             mRenderer.setPenColor(color);
         }
         
-        public void finish() {
+        public void finish(long time) {
             mCoordBuffer.finish();
-
             mRenderer.reset();
         }
 
@@ -356,6 +406,8 @@ public class Slate extends View {
 
     Spot mTmpSpot = new Spot();
     
+    DrawStream mStream;
+    
     public Slate(Context c, AttributeSet as) {
         super(c, as);
         init();
@@ -367,10 +419,10 @@ public class Slate extends View {
     }
     
     private void init() {
-        DrawStream stream = new DrawStream();
+        mStream = new DrawStream();
         
         for (int i=0; i<mStrokes.length; i++) {
-            mStrokes[i] = new Plotter(stream);
+            mStrokes[i] = new Plotter(mStream);
         }
 
         setFocusable(true);
@@ -433,8 +485,9 @@ public class Slate extends View {
 //            mPreviousCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
 //            invalidate();
 //        }
-    	recycle();
-        onSizeChanged(getWidth(), getHeight(), 0, 0);
+        mStream.clear();
+        recycle();
+    	onSizeChanged(getWidth(), getHeight(), 0, 0);
         invalidate();
     }
 
@@ -464,8 +517,18 @@ public class Slate extends View {
     }
 
     public void undo() {
+        /*
         mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
         mCurrentCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
+        */
+        
+        Rect dirty = mStream.undo();
+        //mCurrentCanvas.save();
+        //mCurrentCanvas.clipRect(dirty);
+        mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        mStream.setDrawingStep(0);
+        mStream.play(mCurrentCanvas);
+        //mCurrentCanvas.restore();
         invalidate();
     }
 
@@ -520,10 +583,6 @@ public class Slate extends View {
             // ...or not; the current behavior allows RAINBOW MODE!!!1!
             plotter.setPenColor(color);
         }
-    }
-
-    public void setDensity(float d) {
-        mDensity = d;
     }
 
     @Override
@@ -626,7 +685,7 @@ public class Slate extends View {
         			);
     		mStrokes[event.getPointerId(j)].add(mTmpSpot);
         	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
-	            mStrokes[event.getPointerId(j)].finish();
+	            mStrokes[event.getPointerId(j)].finish(time);
         	}
         } else if (action == MotionEvent.ACTION_MOVE) {
             if (dbgX >= 0) {
@@ -681,7 +740,8 @@ public class Slate extends View {
         
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             for (int j = 0; j < P; j++) {
-                mStrokes[event.getPointerId(j)].finish();
+                mStrokes[event.getPointerId(j)].finish(time);
+                mStream.setUndoMark(time);
             }
             dbgX = dbgY = -1;
         }
