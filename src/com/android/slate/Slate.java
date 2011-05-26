@@ -296,6 +296,7 @@ public class Slate extends View {
             
             Rect dirty = mStream.play(mCurrentCanvas);
             dirty.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
+            dirty.offset((int)mViewportTranslationX, (int)mViewportTranslationY);
             invalidate(dirty);
         }
         
@@ -485,6 +486,7 @@ public class Slate extends View {
 //            mPreviousCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
 //            invalidate();
 //        }
+        mViewportTranslationY = mViewportTranslationX = 0;
         mStream.clear();
         recycle();
     	onSizeChanged(getWidth(), getHeight(), 0, 0);
@@ -509,8 +511,11 @@ public class Slate extends View {
         mPreviousCanvas = mCurrentCanvas;
         mPreviousBitmap = mCurrentBitmap;
 
+        swapCanvas.save();
+        swapCanvas.setMatrix(null);
         swapCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
         swapCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
+        swapCanvas.restore();
 
         mCurrentCanvas = swapCanvas;
         mCurrentBitmap = swapBitmap;
@@ -656,6 +661,11 @@ public class Slate extends View {
 
     float dbgX = -1, dbgY = -1;
     RectF dbgRect = new RectF();
+    private boolean mZoomMode = false;
+    private float mViewportTranslationX;
+    private float mViewportTranslationY;
+    private float mZoomTouchY;
+    private float mZoomTouchX;
     
     static boolean hasPointerCoords() {
     	return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR_MR1);
@@ -667,6 +677,19 @@ public class Slate extends View {
         int N = event.getHistorySize();
         int P = event.getPointerCount();
         long time = event.getEventTime();
+        
+        if (mZoomMode) {
+            if (action == MotionEvent.ACTION_DOWN) {
+                mZoomTouchX = event.getX() - mViewportTranslationX;
+                mZoomTouchY = event.getY() - mViewportTranslationY;
+            } else if (action == MotionEvent.ACTION_MOVE) {
+                setViewportTranslation(event.getX() - mZoomTouchX, event.getY() - mZoomTouchY);
+            }
+            Log.d(TAG, "zoom mode (action="
+                    + action
+                    +"): xlation=(" + mViewportTranslationX + ", " + mViewportTranslationY + ")");
+            return true;
+        }
 
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
@@ -683,6 +706,8 @@ public class Slate extends View {
         			event.getPressure(j),
         			time
         			);
+            mTmpSpot.x -= mViewportTranslationX;
+            mTmpSpot.y -= mViewportTranslationY;
     		mStrokes[event.getPointerId(j)].add(mTmpSpot);
         	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
 	            mStrokes[event.getPointerId(j)].finish(time);
@@ -709,6 +734,8 @@ public class Slate extends View {
                         dbgY = mTmpSpot.y;
                         dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                     }
+                    mTmpSpot.x -= mViewportTranslationX;
+                    mTmpSpot.y -= mViewportTranslationY;
                     mStrokes[event.getPointerId(j)].add(mTmpSpot);
                 }
             }
@@ -720,6 +747,8 @@ public class Slate extends View {
             			event.getPressure(j),
             			time
             			);
+            	mTmpSpot.x -= mViewportTranslationX;
+                mTmpSpot.y -= mViewportTranslationY;
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
                         mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
@@ -748,8 +777,28 @@ public class Slate extends View {
         return true;
     }
 
+    private void setViewportTranslation(float x, float y) {
+        mViewportTranslationX = x;
+        mViewportTranslationY = y;
+        
+        mPreviousCanvas.setMatrix(null);
+        mPreviousCanvas.translate(x,y);
+        mCurrentCanvas.setMatrix(null);
+        mCurrentCanvas.translate(x,y);
+        
+        mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        mStream.setDrawingStep(0);
+        mStream.play(mCurrentCanvas);
+        
+        invalidate();
+    }
+
     public static float lerp(float a, float b, float f) {
         return a + f * (b - a);
+    }
+
+    public void setZoomMode(boolean b) {
+        mZoomMode = b;
     }
 }
 

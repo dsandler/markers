@@ -77,7 +77,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     boolean mJustLoadedImage = false;
 
-    protected PenToolButton mLastTool, mActiveTool;
+    protected ToolButton mLastTool, mActiveTool;
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -161,72 +161,57 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         final boolean firstRun = prefs.getBoolean(PREF_FIRST_RUN, true);
         mSlate.setFirstRun(firstRun);
         
-        final PenToolButton penThinButton = (PenToolButton) findViewById(R.id.pen_thin);
-        penThinButton.setCallback(new PenToolButton.PenToolCallback() {
+        ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
-            public void setPenSize(float min, float max) {
+            public void setZoomMode(ToolButton tool) {
+                mSlate.setZoomMode(true);
+                mLastTool = mActiveTool;
+                mActiveTool = tool;
+                if (mLastTool != mActiveTool) {
+                    mLastTool.deactivate();
+                }
+            }
+
+            @Override
+            public void setPenMode(ToolButton tool, float min, float max) {
+                mSlate.setZoomMode(false);
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
-                mLastTool.setSelected(false);
-                mActiveTool = penThinButton;
+                mActiveTool = tool;
+                
+                if (mLastTool != mActiveTool) {
+                    mLastTool.deactivate();
+                }
             }
             @Override
-            public void restorePenSize() {
-                mLastTool.select();
+            public void restore(ToolButton tool) {
+                if (tool != mLastTool) mLastTool.click();
             }
-        });
+        };
         
-        final PenToolButton penMediumButton = (PenToolButton) findViewById(R.id.pen_medium);
+        final ToolButton penThinButton = (ToolButton) findViewById(R.id.pen_thin);
+        penThinButton.setCallback(toolCB);
+
+        final ToolButton penMediumButton = (ToolButton) findViewById(R.id.pen_medium);
         if (penMediumButton != null) {
-            penMediumButton.setCallback(new PenToolButton.PenToolCallback() {
-                @Override
-                public void setPenSize(float min, float max) {
-                    mSlate.setPenSize(min, max);
-                    mLastTool = mActiveTool;
-                    mLastTool.setSelected(false);
-                    mActiveTool = penMediumButton;
-                }
-                @Override
-                public void restorePenSize() {
-                    mLastTool.select();
-                }
-            });
+            penMediumButton.setCallback(toolCB);
         }
         
-        final PenToolButton penThickButton = (PenToolButton) findViewById(R.id.pen_thick);
-        penThickButton.setCallback(new PenToolButton.PenToolCallback() {
-            @Override
-            public void setPenSize(float min, float max) {
-                mSlate.setPenSize(min, max);
-                mLastTool = mActiveTool;
-                mLastTool.setSelected(false);
-                mActiveTool = penThickButton;
-            }
-            @Override
-            public void restorePenSize() {
-                mLastTool.select();
-            }
-        });
+        final ToolButton penThickButton = (ToolButton) findViewById(R.id.pen_thick);
+        penThickButton.setCallback(toolCB);
 
-        final PenToolButton fatMarkerButton = (PenToolButton) findViewById(R.id.fat_marker);
+        final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
         if (fatMarkerButton != null) {
-            fatMarkerButton.setCallback(new PenToolButton.PenToolCallback() {
-                @Override
-                public void setPenSize(float min, float max) {
-                    mSlate.setPenSize(min, max);
-                    mLastTool = mActiveTool;
-                    mLastTool.setSelected(false);
-                    mActiveTool = fatMarkerButton;
-                }
-                @Override
-                public void restorePenSize() {
-                    mLastTool.select();
-                }
-            });
+            fatMarkerButton.setCallback(toolCB);
+        }
+        
+        final ToolButton zoomButton = (ToolButton) findViewById(R.id.zoom);
+        if (zoomButton != null) {
+            zoomButton.setCallback(toolCB);
         }
         
         mLastTool = mActiveTool = penThickButton;
-        penThickButton.select();
+        penThickButton.click();
    }
 
     // MrShaky.Listener
