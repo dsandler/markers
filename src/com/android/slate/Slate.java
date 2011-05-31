@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -73,14 +74,19 @@ public class Slate extends View {
             public int kind;
             public static final int KIND_MARK = 0;
             public static final int KIND_CIRCLE = 1;
+            public static final int KIND_BITMAP = 2;
+            public static final String[] KIND_NAMES = { "mrk", "cir", "bit" };
             
             public float f0, f1, f2;
-            public int i0, i1, i2;
+            public int i0, i1, i2, i3;
+            public byte[] b;
+            public Bitmap bitmap;
+            
             public DrawOp(long _time, int _kind) {
                 time = _time;
                 kind = _kind;
             }
-            public static DrawOp make(long time, int kind, float f0, float f1, float f2, int i0, int i1, int i2) {
+            public static DrawOp make(long time, int kind, float f0, float f1, float f2, int i0, int i1, int i2, int i3) {
                 DrawOp op = new DrawOp(time, kind);
                 op.f0 = f0;
                 op.f1 = f1;
@@ -88,11 +94,12 @@ public class Slate extends View {
                 op.i0 = i0;
                 op.i1 = i1;
                 op.i2 = i2;
+                op.i3 = i3;
                 return op;
             }
             public String toString() {
                 return String.format("<%s @ %d : %g %g %g %d %d %d>",
-                        (kind == KIND_CIRCLE ? "cir" : "mrk"),
+                        KIND_NAMES[kind],
                         time,
                         f0, f1, f2, i0, i1, i2);
             }
@@ -110,6 +117,16 @@ public class Slate extends View {
                         }
                         c.drawCircle(x, y, r, p);
                         break;
+                    case KIND_BITMAP:
+                        if (bitmap == null && b != null) {
+                            bitmap = BitmapFactory.decodeByteArray(b, 0, b.length);
+                        }
+                        if (bitmap != null) {
+                            p.setXfermode(null);
+                            p.setColor(0xFF000000);
+                            c.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()), new Rect(i0, i1, i2, i3), p);
+                        }
+                        break;
                 }
                 
             }
@@ -118,6 +135,9 @@ public class Slate extends View {
                     case KIND_CIRCLE:
                         final float x=f0, y=f1, r=f2;
                         dirty.union(x-r, y-r, x+r, y+r);
+                        break;
+                    case KIND_BITMAP:
+                        dirty.union(i0, i1, i2, i3);
                         break;
                 }
             }
@@ -162,12 +182,20 @@ public class Slate extends View {
             // TODO
         }
         
+        
+        // Drawing calls
         public void plotCircle(long time, float x, float y, float r, int color) {
-            stream.add(DrawOp.make(time, DrawOp.KIND_CIRCLE, x, y, r, color, 0, 0));
+            stream.add(DrawOp.make(time, DrawOp.KIND_CIRCLE, x, y, r, color, 0, 0, 0));
         }
         
         public void setUndoMark(long time) {
-            stream.add(DrawOp.make(time, DrawOp.KIND_MARK, 0, 0, 0, 0, 0, 0));
+            stream.add(DrawOp.make(time, DrawOp.KIND_MARK, 0, 0, 0, 0, 0, 0, 0));
+        }
+        
+        public void plotBitmap(long time, Bitmap bits, Rect dst) {
+            final DrawOp d = DrawOp.make(time, DrawOp.KIND_BITMAP, 0, 0, 0, dst.left, dst.top, dst.right, dst.bottom);
+            d.bitmap = bits;
+            stream.add(d);
         }
         
         public Rect undo() {
@@ -189,6 +217,7 @@ public class Slate extends View {
                 //Log.d(TAG, "trunc removing #" + (step) + ": " + op);
                 op.dirty(dirty);
                 stream.remove(step);
+                dirtyDeedsDone.union(dirty);
             }
             if (mDrawingStep > stream.size())
                 mDrawingStep = stream.size();
@@ -295,7 +324,7 @@ public class Slate extends View {
             mRenderer.strokeTo(s.time, s.x, s.y, radius);
             
             Rect dirty = mStream.play(mCurrentCanvas);
-            dirty.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
+            //dirty.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
             dirty.offset((int)mViewportTranslationX, (int)mViewportTranslationY);
             invalidate(dirty);
         }
@@ -534,7 +563,8 @@ public class Slate extends View {
         mStream.setDrawingStep(0);
         mStream.play(mCurrentCanvas);
         //mCurrentCanvas.restore();
-        invalidate();
+
+        invalidate(dirty);
     }
 
     public void paintBitmap(Bitmap b) {
@@ -544,7 +574,16 @@ public class Slate extends View {
         RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
         RectF d = new RectF(0, 0, mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight());
         m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
-        mCurrentCanvas.drawBitmap(b, m, null);
+        
+        m.mapRect(d);
+        Rect r = new Rect();
+        d.roundOut(r);
+        mStream.plotBitmap(0, b, r);
+        mStream.setUndoMark(0);
+        mStream.play(mCurrentCanvas);
+        invalidate(r);
+
+        //mCurrentCanvas.drawBitmap(b, m, null);
 
         if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) mPreviousCanvas=%s",
             b.toString(), b.getWidth(), b.getHeight(),
@@ -632,7 +671,7 @@ public class Slate extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mPreviousBitmap != null) {
+        if (mCurrentBitmap != null) {
             canvas.drawBitmap(mCurrentBitmap, 0, 0, null);
 
 //            if (0 != mDebugFlags) {
@@ -653,8 +692,8 @@ public class Slate extends View {
                             mPressureMin, mPressureMax,
                             mPressureRecentMin, mPressureRecentMax,
                             mPressureUpdateCountdown),
-                        2, canvas.getHeight() - 64, mDebugPaints[4]);
-                canvas.drawText(strokeInfo.toString(), 2, canvas.getHeight() - 52, mDebugPaints[4]);
+                        52, canvas.getHeight() - 64, mDebugPaints[4]);
+                canvas.drawText(strokeInfo.toString(), 52, canvas.getHeight() - 52, mDebugPaints[4]);
             }
         }
     }
@@ -799,6 +838,14 @@ public class Slate extends View {
 
     public void setZoomMode(boolean b) {
         mZoomMode = b;
+    }
+    
+    @Override
+    public void invalidate(Rect r) {
+        if (r.isEmpty()) {
+            Log.w(TAG, "invalidating empty rect!");
+        }
+        super.invalidate(r);
     }
 }
 
