@@ -13,6 +13,7 @@ import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.PixelFormat;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -26,6 +27,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -51,15 +53,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public static final String WIP_FILENAME = "temporary.png";
 
     private static final String PREFS_NAME = "MarkersPrefs";
-
-    private static final String PREF_MIN_DIAMETER = "min_diameter";
-    private static final String PREF_MAX_DIAMETER = "max_diameter";
-    private static final String PREF_PRESSURE_MIN = "pressure_min";
-    private static final String PREF_PRESSURE_MAX = "pressure_max";
-    private static final String PREF_FIRST_RUN = "first_run";
-
-    private static final float DEF_PRESSURE_MIN = 0.2f;
-    private static final float DEF_PRESSURE_MAX = 0.9f;
 
     private static final int[] BUTTON_COLORS = {
         0xFF000000,
@@ -106,6 +99,15 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
+        
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+        lp.copyFrom(getWindow().getAttributes());
+        lp.format = PixelFormat.RGBA_8888;
+        getWindow().setBackgroundDrawableResource(R.drawable.transparent);
+        getWindow().setAttributes(lp);
+
+        //Log.d(TAG, "window format: " + getWindow().getAttributes().format);
+        
         mShaky = new MrShaky(this, this);
         
         setContentView(R.layout.main);
@@ -145,36 +147,10 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         clickColor(colors.getChildAt(0));
 
         Resources res = getResources();
-        float minDiameter = res.getDimension(R.dimen.default_pen_size_min);
-        float maxDiameter = res.getDimension(R.dimen.default_pen_size_max);
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
-
-        minDiameter = prefs.getFloat(PREF_MIN_DIAMETER, minDiameter);
-        maxDiameter = prefs.getFloat(PREF_MAX_DIAMETER, maxDiameter);
-        mSlate.setPenSize(minDiameter, maxDiameter);
-
-        float pMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
-        float pMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
-        mSlate.setPressureRange(pMin, pMax);
-
-        final boolean firstRun = prefs.getBoolean(PREF_FIRST_RUN, true);
-        mSlate.setFirstRun(firstRun);
         
         ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
-            public void setZoomMode(ToolButton tool) {
-                mSlate.setZoomMode(true);
-                mLastTool = mActiveTool;
-                mActiveTool = tool;
-                if (mLastTool != mActiveTool) {
-                    mLastTool.deactivate();
-                }
-            }
-
-            @Override
             public void setPenMode(ToolButton tool, float min, float max) {
-                mSlate.setZoomMode(false);
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
                 mActiveTool = tool;
@@ -200,18 +176,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         final ToolButton penThickButton = (ToolButton) findViewById(R.id.pen_thick);
         penThickButton.setCallback(toolCB);
 
-        final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
-        if (fatMarkerButton != null) {
-            fatMarkerButton.setCallback(toolCB);
-        }
+        //final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
+        //if (fatMarkerButton != null) {
+        //    fatMarkerButton.setCallback(toolCB);
+        //}
         
-        final ToolButton zoomButton = (ToolButton) findViewById(R.id.zoom);
-        if (zoomButton != null) {
-            zoomButton.setCallback(toolCB);
-        }
-        
-        mLastTool = mActiveTool = penThickButton;
-        penThickButton.click();
+        mLastTool = mActiveTool = (penThickButton != null) ? penThickButton : penThinButton;
+        mActiveTool.click();
    }
 
     // MrShaky.Listener
@@ -227,17 +198,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void onPause() {
         super.onPause();
         mShaky.pause();
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
-        SharedPreferences.Editor prefsE = prefs.edit();
-        prefsE.putBoolean(PREF_FIRST_RUN, false);
-
-        float[] range = new float[2];
-        mSlate.getPressureRange(range);
-        prefsE.putFloat(PREF_PRESSURE_MIN, range[0]);
-        prefsE.putFloat(PREF_PRESSURE_MAX, range[1]);
-
-        prefsE.commit();
     }
 
     @Override
@@ -351,8 +311,15 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public boolean loadDrawing(String filename, boolean temporary) {
         File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
+        final String filePath = new File(d, filename).toString();
+        //Log.d(TAG, "loadDrawing: " + filePath);
+        
         if (d.exists()) {
-            Bitmap bits = BitmapFactory.decodeFile(new File(d, filename).toString());
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inDither = false;
+            opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            opts.inScaled = false;
+            Bitmap bits = BitmapFactory.decodeFile(filePath, opts);
             if (bits != null) {
                 mSlate.setBitmap(bits);
                 return true;
@@ -364,6 +331,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public String saveDrawing(String filename) {
         return saveDrawing(filename, false);
     }
+    
     public String saveDrawing(String filename, boolean temporary) {
         String fn = null;
         Bitmap bits = mSlate.getBitmap();
@@ -461,8 +429,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         for (int i=0; i<list.getChildCount(); i++) {
             Button c = (Button) list.getChildAt(i);
             c.setText(c==v
-                ?(color==0?"E":"\u25A0")
-                :"");
+                ? "\u25A0"
+                : "");
         }
     }
 

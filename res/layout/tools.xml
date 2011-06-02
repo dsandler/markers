@@ -8,15 +8,6 @@
 	android:layout_height="match_parent"
 	>
        <view
-           class="com.google.android.markersbeta.ToolButton$ZoomToolButton"
-           android:id="@+id/zoom"
-           android:layout_width="match_parent"
-           android:layout_height="match_parent"
-           android:layout_marginBottom="4dp"
-           android:padding="4dp"
-           android:layout_weight="1"
-           />
-       <view
            class="com.google.android.markersbeta.ToolButton$PenToolButton"
            android:id="@+id/pen_thin"
            android:layout_width="match_parent"

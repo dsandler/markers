@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -32,8 +33,6 @@ public class Slate extends View {
 
     public static final int MAX_POINTERS = 10;
 
-    private static final boolean BEZIER = false;
-    private static final float BEZIER_CONTROL_POINT_DISTANCE=0.25f;
     private static final float WALK_STEP_PX = 3.0f;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
@@ -45,275 +44,31 @@ public class Slate extends View {
 
     private float mPressureExponent = 2.0f;
 
-    private float mPressureMin = 0;
-    private float mPressureMax = 1;
-
-    public static final float PRESSURE_UPDATE_DECAY = 0.1f;
-    public static final int PRESSURE_UPDATE_STEPS_FIRSTBOOT = 100; // points, a quick-training regimen
-    public static final int PRESSURE_UPDATE_STEPS_NORMAL = 1000; // points, in normal use
-    private int mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
-    private int mPressureUpdateCountdown = mPressureCountdownStart;
-    private float mPressureRecentMin = 1;
-    private float mPressureRecentMax = 0;
-
     private float mRadiusMin;
     private float mRadiusMax;
 
-    private float mLastPressure;
-
-    private int mDebugFlags = 0;
+    int mDebugFlags = 0;
 
     private Bitmap mPreviousBitmap, mCurrentBitmap;
     private Canvas mPreviousCanvas, mCurrentCanvas;
     private final Paint mDebugPaints[] = new Paint[10];
     
-    public static class DrawStream {
-        private static class DrawOp {
-            public long time;
-            
-            public int kind;
-            public static final int KIND_MARK = 0;
-            public static final int KIND_CIRCLE = 1;
-            public static final int KIND_BITMAP = 2;
-            public static final String[] KIND_NAMES = { "mrk", "cir", "bit" };
-            
-            public float f0, f1, f2;
-            public int i0, i1, i2, i3;
-            public byte[] b;
-            public Bitmap bitmap;
-            
-            public DrawOp(long _time, int _kind) {
-                time = _time;
-                kind = _kind;
-            }
-            public static DrawOp make(long time, int kind, float f0, float f1, float f2, int i0, int i1, int i2, int i3) {
-                DrawOp op = new DrawOp(time, kind);
-                op.f0 = f0;
-                op.f1 = f1;
-                op.f2 = f2;
-                op.i0 = i0;
-                op.i1 = i1;
-                op.i2 = i2;
-                op.i3 = i3;
-                return op;
-            }
-            public String toString() {
-                return String.format("<%s @ %d : %g %g %g %d %d %d>",
-                        KIND_NAMES[kind],
-                        time,
-                        f0, f1, f2, i0, i1, i2);
-            }
-            public void draw(Canvas c, Paint p) {
-                switch (kind) {
-                    case KIND_CIRCLE:
-                        final float x=f0, y=f1, r=f2;
-                        if (i0 == 0) {
-                            // eraser: DST_OUT
-                            p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
-                            p.setColor(0xFF000000);
-                        } else {
-                            p.setXfermode(null);
-                            p.setColor(i0);
-                        }
-                        c.drawCircle(x, y, r, p);
-                        break;
-                    case KIND_BITMAP:
-                        if (bitmap == null && b != null) {
-                            bitmap = BitmapFactory.decodeByteArray(b, 0, b.length);
-                        }
-                        if (bitmap != null) {
-                            p.setXfermode(null);
-                            p.setColor(0xFF000000);
-                            c.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()), new Rect(i0, i1, i2, i3), p);
-                        }
-                        break;
-                }
-                
-            }
-            public void dirty(RectF dirty) {
-                switch (kind) {
-                    case KIND_CIRCLE:
-                        final float x=f0, y=f1, r=f2;
-                        dirty.union(x-r, y-r, x+r, y+r);
-                        break;
-                    case KIND_BITMAP:
-                        dirty.union(i0, i1, i2, i3);
-                        break;
-                }
-            }
-        }
-        
-        public String toString() {
-            // summarize
-            String s = "[";
-            int lastKind = -1;
-            int count = 0;
-            for (DrawOp op : stream) {
-                if (op.kind != lastKind) {
-                    if (count > 0) {
-                        s += lastKind + " (" + count + "), ";
-                    }
-                    lastKind = op.kind;
-                    count = 1;
-                } else count++;
-            }
-            if (count > 0) {
-                s += lastKind + " (" + count + ")";
-            }
-            return s + "]";
-        }
+    private PressureCooker mPressureCooker;
 
-        private ArrayList<DrawOp> stream;
-        final Paint mPaint;
-        
-        private int mDrawingStep;
-        
-        public DrawStream() {
-            stream = new ArrayList<DrawOp>(10000);
-            mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            mDrawingStep = 0;
-        }
-        public void loadFromFile() {
-            // TODO
-            // - update mStrokeId to be last+1
-        }
-        
-        public void writeToFile() {
-            // TODO
-        }
-        
-        
-        // Drawing calls
-        public void plotCircle(long time, float x, float y, float r, int color) {
-            stream.add(DrawOp.make(time, DrawOp.KIND_CIRCLE, x, y, r, color, 0, 0, 0));
-        }
-        
-        public void setUndoMark(long time) {
-            stream.add(DrawOp.make(time, DrawOp.KIND_MARK, 0, 0, 0, 0, 0, 0, 0));
-        }
-        
-        public void plotBitmap(long time, Bitmap bits, Rect dst) {
-            final DrawOp d = DrawOp.make(time, DrawOp.KIND_BITMAP, 0, 0, 0, dst.left, dst.top, dst.right, dst.bottom);
-            d.bitmap = bits;
-            stream.add(d);
-        }
-        
-        public Rect undo() {
-            Log.d(TAG, "undo: stream: " + toString());
-            int i = stream.size() - 2; 
-            while (i --> 0) {
-                if (stream.get(i).kind == DrawOp.KIND_MARK) 
-                    return trunc(i+1);
-            }
-            return trunc(0);
-        }
-        
-        public Rect trunc(int step) {
-            RectF dirty = new RectF();
-            RectF dirtyDeedsDone = new RectF();
-            Log.d(TAG, "trunc will discard " + (stream.size()-step) + " steps");
-            while (step < stream.size()) {
-                DrawOp op = stream.get(step);
-                //Log.d(TAG, "trunc removing #" + (step) + ": " + op);
-                op.dirty(dirty);
-                stream.remove(step);
-                dirtyDeedsDone.union(dirty);
-            }
-            if (mDrawingStep > stream.size())
-                mDrawingStep = stream.size();
-            Rect r2 = new Rect();
-            dirtyDeedsDone.roundOut(r2);
-            return r2;
-        }
-        
-        public void setDrawingStep(int step) {
-            mDrawingStep = step;
-        }
-        
-        public Rect play(Canvas c) {
-            return play(c, stream.size()-1-mDrawingStep);
-        }
-        
-        public Rect play(Canvas c, int steps) {
-            if (mDrawingStep + steps > stream.size() - 1)
-                steps = stream.size() - 1 - mDrawingStep;
-
-            RectF dirty = new RectF();
-            RectF dirtyDeedsDone = new RectF();
-            while (steps-- > 0) {
-                DrawOp op = stream.get(mDrawingStep++);
-                dirty.setEmpty();
-                op.dirty(dirty);
-                if (! c.quickReject(dirty, Canvas.EdgeType.AA)) {
-                    op.draw(c, mPaint);
-                    dirtyDeedsDone.union(dirty);
-                }
-            }
-            Rect r2 = new Rect();
-            dirtyDeedsDone.roundOut(r2);
-            return r2;
-        }
-        
-        public void clear() {
-            mDrawingStep = 0;
-            stream.clear();
-        }
-    }
-    
-    private class PressureCooker {
-        // Adjusts pressure values on the fly based on historical maxima/minima.
-        public float getAdjustedPressure(float pressure) {
-            mLastPressure = pressure;
-            if (pressure < mPressureRecentMin) mPressureRecentMin = pressure;
-            if (pressure > mPressureRecentMax) mPressureRecentMax = pressure;
-            
-            if (--mPressureUpdateCountdown == 0) {
-                final float decay = PRESSURE_UPDATE_DECAY;
-                mPressureMin = (1-decay) * mPressureMin + decay * mPressureRecentMin;
-                mPressureMax = (1-decay) * mPressureMax + decay * mPressureRecentMax;
-
-                // upside-down values, will be overwritten on the next point
-                mPressureRecentMin = 1;
-                mPressureRecentMax = 0;
-
-                // walk the countdown up to the maximum value
-                if (mPressureCountdownStart < PRESSURE_UPDATE_STEPS_NORMAL) {
-                    mPressureCountdownStart = (int) (mPressureCountdownStart * 1.5f);
-                    if (mPressureCountdownStart > PRESSURE_UPDATE_STEPS_NORMAL)
-                        mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
-                }
-                mPressureUpdateCountdown = mPressureCountdownStart;
-            }
-
-            final float pressureNorm = (pressure - mPressureMin)
-                / (mPressureMax - mPressureMin);
-
-            if (false && 0 != (mDebugFlags)) {
-                Log.d(TAG, String.format("pressure=%.2f range=%.2f-%.2f obs=%.2f-%.2f pnorm=%.2f",
-                    pressure, mPressureMin, mPressureMax, mPressureRecentMin, mPressureRecentMax, pressureNorm));
-            }
-
-            return pressureNorm;
-        }
-    }
-    
-    private final PressureCooker mPressureCooker = new PressureCooker();
-
-    private class Plotter implements SpotFilter.Plotter {
+    private class MarkersPlotter implements SpotFilter.Plotter {
         // Plotter receives pointer coordinates and draws them.
         // It implements the necessary interface to receive filtered Spots from the SpotFilter.
         // It hands off the drawing command to the renderer.
         
         private SpotFilter mCoordBuffer;
         private SmoothStroker mRenderer;
-        private DrawStream mStream;
         
-        public Plotter(DrawStream stream) {
+        public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
-            mStream = stream;
-            mRenderer = new SmoothStroker(stream);
+            mRenderer = new SmoothStroker();
         }
 
+        final Rect tmpDirtyRect = new Rect();
         @Override
         public void plot(Spot s) {
             final float pressureNorm = mPressureCooker.getAdjustedPressure(s.pressure);
@@ -321,13 +76,10 @@ public class Slate extends View {
             final float radius = lerp(mRadiusMin, mRadiusMax,
                    (float) Math.pow(pressureNorm, mPressureExponent));
             
-            mRenderer.strokeTo(s.time, s.x, s.y, radius);
-            
-            Rect dirty = mStream.play(mCurrentCanvas);
-            //dirty.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
-            
-            dirty.offset((int)mViewportTranslationX, (int)mViewportTranslationY);
-            invalidate(dirty);
+            RectF dirtyF = mRenderer.strokeTo(mCurrentCanvas, s.x, s.y, radius);
+            dirtyF.roundOut(tmpDirtyRect);
+            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
+            invalidate(tmpDirtyRect);
         }
         
         public void setPenColor(int color) {
@@ -359,14 +111,22 @@ public class Slate extends View {
         private Path mWorkPath = new Path();
         private PathMeasure mWorkPathMeasure = new PathMeasure();
         
-        private DrawStream mStream;
-
-        public SmoothStroker(DrawStream stream) {
-            mStream = stream;
+        private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        
+        public SmoothStroker() {
+            
         }
 
         public void setPenColor(int color) {
             mPenColor = color;
+            if (color == 0) {
+                // eraser: DST_OUT
+                mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
+                mPaint.setColor(Color.BLACK);
+            } else {
+                mPaint.setXfermode(null);
+                mPaint.setColor(color);
+            }
         }
 
         public int getPenColor() {
@@ -381,26 +141,23 @@ public class Slate extends View {
             mLastR = -1;
         }
 
-        public void strokeTo(long time, float x, float y, float r) {
+        final static RectF tmpDirtyRectF = new RectF();
+        public RectF strokeTo(Canvas c, float x, float y, float r) {
+            final RectF dirty = tmpDirtyRectF;
+            dirty.setEmpty();
+            
             if (mLastR < 0) {
                 // always draw the first point
-                mStream.plotCircle(time, x, y, r, mPenColor);
+                c.drawCircle(x, y, r, mPaint);
+                dirty.union(x-r, y-r, x+r, y+r);
             } else {
                 // connect the dots, la-la-la
                 
                 Path p = mWorkPath;
                 p.reset();
                 p.moveTo(mLastX, mLastY);
-
-                if (BEZIER && (mTan[0] != 0 || mTan[1] != 0)) {
-                    float controlX = mLastX + mTan[0]*BEZIER_CONTROL_POINT_DISTANCE;
-                    float controlY = mLastY + mTan[1]*BEZIER_CONTROL_POINT_DISTANCE;
-
-                    p.quadTo(controlX, controlY, x, y);
-                } else {
-                    p.lineTo(x, y);
-                }
-
+                p.lineTo(x, y);
+                
                 PathMeasure pm = mWorkPathMeasure;
                 pm.setPath(p, false);
                 mLastLen = pm.getLength();
@@ -416,7 +173,8 @@ public class Slate extends View {
                     mTan[0] *= mLastLen; mTan[1] *= mLastLen;
 
                     ri = lerp(mLastR, r, d / mLastLen);
-                    mStream.plotCircle(time, posOut[0], posOut[1], ri, mPenColor);
+                    c.drawCircle(posOut[0], posOut[1], ri, mPaint);
+                    dirty.union(posOut[0] - ri, posOut[1] - ri, posOut[0] + ri, posOut[1] + ri);
 
                     if (d == mLastLen) break;
                     d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
@@ -426,6 +184,8 @@ public class Slate extends View {
             mLastX = x;
             mLastY = y;
             mLastR = r;
+            
+            return dirty;
         }
         
         public float getRadius() {
@@ -433,11 +193,11 @@ public class Slate extends View {
         }
     }
 
-    private Plotter[] mStrokes = new Plotter[MAX_POINTERS];
+    private MarkersPlotter[] mStrokes = new MarkersPlotter[MAX_POINTERS];
 
     Spot mTmpSpot = new Spot();
     
-    DrawStream mStream;
+    private static Paint sBitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
     
     public Slate(Context c, AttributeSet as) {
         super(c, as);
@@ -450,11 +210,11 @@ public class Slate extends View {
     }
     
     private void init() {
-        mStream = new DrawStream();
-        
         for (int i=0; i<mStrokes.length; i++) {
-            mStrokes[i] = new Plotter(mStream);
+            mStrokes[i] = new MarkersPlotter();
         }
+        
+        mPressureCooker = new PressureCooker(getContext());
 
         setFocusable(true);
         
@@ -480,25 +240,6 @@ public class Slate extends View {
         mRadiusMax = max * 0.5f;
     }
 
-    public void setFirstRun(boolean firstRun) {
-        // "Why do my eyes hurt?"
-        // "You've never used them before."
-        if (firstRun) {
-            mPressureUpdateCountdown = mPressureCountdownStart = PRESSURE_UPDATE_STEPS_FIRSTBOOT;
-        }
-    }
-
-    public void setPressureRange(float min, float max) {
-        mPressureMin = min;
-        mPressureMax = max;
-    }
-    
-    public float[] getPressureRange(float[] r) {
-        r[0] = mPressureMin;
-        r[1] = mPressureMax;
-        return r;
-    }
-    
     public void recycle() {
     	// WARNING: the slate will not be usable until you call load() or clear() or something
     	if (mPreviousBitmap != null) {
@@ -512,12 +253,10 @@ public class Slate extends View {
     }
 
     public void clear() {
-//        if (mPreviousCanvas != null) {
-//            mPreviousCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
-//            invalidate();
-//        }
-        mViewportTranslationY = mViewportTranslationX = 0;
-        mStream.clear();
+        if (mPreviousCanvas != null) {
+            mPreviousCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
+            invalidate();
+        }
         recycle();
     	onSizeChanged(getWidth(), getHeight(), 0, 0);
         invalidate();
@@ -552,20 +291,10 @@ public class Slate extends View {
     }
 
     public void undo() {
-        /*
         mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
         mCurrentCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
-        */
-        
-        Rect dirty = mStream.undo();
-        //mCurrentCanvas.save();
-        //mCurrentCanvas.clipRect(dirty);
-        mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-        mStream.setDrawingStep(0);
-        mStream.play(mCurrentCanvas);
-        //mCurrentCanvas.restore();
 
-        invalidate(dirty);
+        invalidate();
     }
 
     public void paintBitmap(Bitmap b) {
@@ -573,23 +302,16 @@ public class Slate extends View {
 
         Matrix m = new Matrix();
         RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
-        RectF d = new RectF(0, 0, mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight());
+        RectF d = new RectF(0, 0, mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight());
         m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
         
-        m.mapRect(d);
-        Rect r = new Rect();
-        d.roundOut(r);
-        mStream.plotBitmap(0, b, r);
-        mStream.setUndoMark(0);
-        mStream.play(mCurrentCanvas);
-        invalidate(r);
+        mCurrentCanvas.drawBitmap(b, m, sBitmapPaint);
+        invalidate();
 
-        //mCurrentCanvas.drawBitmap(b, m, null);
-
-        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) mPreviousCanvas=%s",
+        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) canvas=%s",
             b.toString(), b.getWidth(), b.getHeight(),
-            mPreviousBitmap.toString(), mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight(),
-            mPreviousCanvas.toString()));
+            mCurrentBitmap.toString(), mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight(),
+            mCurrentCanvas.toString()));
     }
 
     public Bitmap getBitmap() {
@@ -623,7 +345,7 @@ public class Slate extends View {
     }
 
     public void setPenColor(int color) {
-        for (Plotter plotter : mStrokes) {
+        for (MarkersPlotter plotter : mStrokes) {
             // XXX: todo: only do this if the stroke hasn't begun already
             // ...or not; the current behavior allows RAINBOW MODE!!!1!
             plotter.setPenColor(color);
@@ -633,39 +355,13 @@ public class Slate extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
+        if (mCurrentBitmap != null) return;
 
-        int curW = mPreviousBitmap != null ? mPreviousBitmap.getWidth() : 0;
-        int curH = mPreviousBitmap != null ? mPreviousBitmap.getHeight() : 0;
-        if (curW >= w && curH >= h) {
-            return;
-        }
+        mCurrentBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        mCurrentCanvas = new Canvas();
+        mCurrentCanvas.setBitmap(mCurrentBitmap);
 
-        if (FIXED_DIMENSION > 0) {
-            curW = curH = FIXED_DIMENSION;
-        } else {
-            if (curW < w) curW = w;
-            if (curH < h) curH = h;
-        }
-
-        Bitmap newBitmap = Bitmap.createBitmap(curW, curH,
-                Bitmap.Config.ARGB_8888);
-        if (DEBUG) {
-            Log.d(TAG, "new size: " + w + "x" + h);
-            Log.d(TAG, "old bitmap: " + mPreviousBitmap);
-            Log.d(TAG, "created bitmap " + curW + "x" + curH + ": " + newBitmap);
-        }
-        Canvas newCanvas = new Canvas();
-        newCanvas.setBitmap(newBitmap);
-        if (mPreviousBitmap != null) {
-            // copy the old bitmap in? doesn't seem to work
-            newCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
-        }
-        if (mCurrentBitmap != null && !mCurrentBitmap.isRecycled()) mCurrentBitmap.recycle();
-        mCurrentBitmap = newBitmap;
-        mCurrentCanvas = newCanvas;
-
-        if (mPreviousBitmap != null && !mPreviousBitmap.isRecycled()) mPreviousBitmap.recycle();
-        mPreviousBitmap = Bitmap.createBitmap(curW, curH, Bitmap.Config.ARGB_8888);
+        mPreviousBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         mPreviousCanvas = new Canvas();
         mPreviousCanvas.setBitmap(mPreviousBitmap);
     }
@@ -674,46 +370,11 @@ public class Slate extends View {
     protected void onDraw(Canvas canvas) {
         if (mCurrentBitmap != null) {
             canvas.drawBitmap(mCurrentBitmap, 0, 0, null);
-
-//            if (0 != mDebugFlags) {
-//                canvas.drawRect(
-            if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
-                StringBuffer strokeInfo = new StringBuffer();
-                /*for (SmoothStroker st : mStrokes) {
-                    final float r = st.getRadius();
-                    strokeInfo.append(
-                        (r < 0)
-                            ? "[-] "
-                            : String.format("[%.1f] ", r));
-                }*/
-
-                canvas.drawText(
-                        String.format("p: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d", 
-                            mLastPressure,
-                            mPressureMin, mPressureMax,
-                            mPressureRecentMin, mPressureRecentMax,
-                            mPressureUpdateCountdown),
-                        52, canvas.getHeight() - 64, mDebugPaints[4]);
-                canvas.drawText(strokeInfo.toString(), 52, canvas.getHeight() - 52, mDebugPaints[4]);
-            }
         }
     }
 
     float dbgX = -1, dbgY = -1;
     RectF dbgRect = new RectF();
-    private boolean mZoomMode = false;
-    private float mZoomTouchY;
-    private float mZoomTouchX;
-    private float mZoomTouchX2;
-    private float mZoomTouchY2;
-    private float mViewportTranslationX = 0.0f;
-    private float mViewportTranslationY = 0.0f;
-    private float mLastViewportTranslationX = 0.0f;
-    private float mLastViewportTranslationY = 0.0f;
-    private float mViewportScaleX = 1.0f;
-    private float mViewportScaleY = 1.0f;
-    private float mLastViewportScaleX;
-    private float mLastViewportScaleY;
     
     static boolean hasPointerCoords() {
     	return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR_MR1);
@@ -726,42 +387,6 @@ public class Slate extends View {
         int P = event.getPointerCount();
         long time = event.getEventTime();
         
-        if (mZoomMode) {
-            if (action == MotionEvent.ACTION_DOWN) {
-                mZoomTouchX = event.getX();
-                mZoomTouchY = event.getY();
-                mLastViewportTranslationX = mViewportTranslationX;
-                mLastViewportTranslationY = mViewportTranslationY;
-                mLastViewportScaleX = mViewportScaleX;
-                mLastViewportScaleY = mViewportScaleY;
-            } else if (action == MotionEvent.ACTION_POINTER_DOWN) {
-                if (P == 2) {
-                    final int j = event.getActionIndex();
-                    mZoomTouchX2 = event.getX(j);
-                    mZoomTouchY2 = event.getY(j);
-                }
-            } else if (action == MotionEvent.ACTION_POINTER_UP) {
-                if (P == 2) {
-                    mZoomTouchX2 = -1;
-                    mZoomTouchY2 = -1;
-                }
-            } else if (action == MotionEvent.ACTION_MOVE) {
-                final float dx = event.getX(0) - mZoomTouchX;
-                final float dy = event.getY(0) - mZoomTouchY;
-                setViewportTranslation(mLastViewportTranslationX + dx, mLastViewportTranslationY + dy);
-                if (mZoomTouchX2 >= 0 && P >= 2) { // zoomin'
-                    final float sx = event.getX(1) - event.getX(0);
-                    final float sy = event.getY(1) - event.getY(0);
-                    setViewportScale(mLastViewportScaleX * sx / (mZoomTouchX2 - mZoomTouchX),
-                                     mLastViewportScaleY * sy / (mZoomTouchY2 - mZoomTouchY));
-                }
-            }
-            //Log.d(TAG, "zoom mode (action="
-            //        + action
-            //        +"): xlation=(" + mViewportTranslationX + ", " + mViewportTranslationY + ")");
-            return true;
-        }
-
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
             commitStroke();
@@ -777,9 +402,7 @@ public class Slate extends View {
         			event.getPressure(j),
         			time
         			);
-            mTmpSpot.x = mTmpSpot.x / mViewportScaleX - mViewportTranslationX;
-            mTmpSpot.y = mTmpSpot.y / mViewportScaleY - mViewportTranslationY;
-    		mStrokes[event.getPointerId(j)].add(mTmpSpot);
+            mStrokes[event.getPointerId(j)].add(mTmpSpot);
         	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
 	            mStrokes[event.getPointerId(j)].finish(time);
         	}
@@ -805,8 +428,6 @@ public class Slate extends View {
                         dbgY = mTmpSpot.y;
                         dbgRect.union(dbgX-1, dbgY-1, dbgX+1, dbgY+1);
                     }
-                    mTmpSpot.x = mTmpSpot.x / mViewportScaleX - mViewportTranslationX;
-                    mTmpSpot.y = mTmpSpot.y / mViewportScaleY - mViewportTranslationY;
                     mStrokes[event.getPointerId(j)].add(mTmpSpot);
                 }
             }
@@ -818,8 +439,6 @@ public class Slate extends View {
             			event.getPressure(j),
             			time
             			);
-                mTmpSpot.x = mTmpSpot.x / mViewportScaleX - mViewportTranslationX;
-                mTmpSpot.y = mTmpSpot.y / mViewportScaleY - mViewportTranslationY;
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
                         mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
@@ -841,49 +460,14 @@ public class Slate extends View {
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             for (int j = 0; j < P; j++) {
                 mStrokes[event.getPointerId(j)].finish(time);
-                mStream.setUndoMark(time);
             }
             dbgX = dbgY = -1;
         }
         return true;
     }
 
-    private void setViewportTranslation(float x, float y) {
-        mViewportTranslationX = x;
-        mViewportTranslationY = y;
-        updateViewport();
-    }
-    
-    private void setViewportScale(float fx, float fy) {
-        //Log.d(TAG, "scale: " + fx + "x" + fy);
-        fx = Math.max(Math.abs(fx), 0.1f);
-        fy = Math.max(Math.abs(fy), 0.1f);
-        mViewportScaleX = mViewportScaleY = Math.max(fx, fy);
-        
-        updateViewport();
-    }
-    
-    private void updateViewport() {
-        mPreviousCanvas.setMatrix(null);
-        mPreviousCanvas.translate(mViewportTranslationX, mViewportTranslationY);
-        mPreviousCanvas.scale(mViewportScaleX, mViewportScaleY, mZoomTouchX, mZoomTouchY);
-        mCurrentCanvas.setMatrix(null);
-        mCurrentCanvas.translate(mViewportTranslationX, mViewportTranslationY);
-        mCurrentCanvas.scale(mViewportScaleX, mViewportScaleY, mZoomTouchX, mZoomTouchY);
-        
-        mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-        mStream.setDrawingStep(0);
-        mStream.play(mCurrentCanvas);
-        
-        invalidate();
-    }
-
     public static float lerp(float a, float b, float f) {
         return a + f * (b - a);
-    }
-
-    public void setZoomMode(boolean b) {
-        mZoomMode = b;
     }
     
     @Override

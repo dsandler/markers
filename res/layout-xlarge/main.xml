@@ -18,8 +18,8 @@
 		android:layout_height="match_parent"
 		android:layout_below="@+id/actionbar"
 		android:layout_alignParentLeft="true"
-		android:layout_centerVertical="true"
 		android:orientation="vertical"
+        android:layout_marginBottom="8dip"
 		>
 		<include layout="@layout/tools"
 			android:layout_marginTop="8dip"
