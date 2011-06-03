@@ -253,12 +253,8 @@ public class Slate extends View {
     }
 
     public void clear() {
-        if (mPreviousCanvas != null) {
-            mPreviousCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
-            invalidate();
-        }
-        recycle();
-    	onSizeChanged(getWidth(), getHeight(), 0, 0);
+        commitStroke();
+        mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
         invalidate();
     }
 
