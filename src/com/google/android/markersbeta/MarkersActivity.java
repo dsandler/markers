@@ -176,10 +176,10 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         final ToolButton penThickButton = (ToolButton) findViewById(R.id.pen_thick);
         penThickButton.setCallback(toolCB);
 
-        //final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
-        //if (fatMarkerButton != null) {
-        //    fatMarkerButton.setCallback(toolCB);
-        //}
+        final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
+        if (fatMarkerButton != null) {
+            fatMarkerButton.setCallback(toolCB);
+        }
         
         mLastTool = mActiveTool = (penThickButton != null) ? penThickButton : penThinButton;
         mActiveTool.click();
