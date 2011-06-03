@@ -195,6 +195,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         mActiveTool.click();
         
         mDebugButton = findViewById(R.id.debug);
+        
+        // clickDebug(null); // auto-debug mode for partners
    }
 
     // MrShaky.Listener

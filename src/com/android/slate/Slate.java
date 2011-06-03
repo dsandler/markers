@@ -65,6 +65,8 @@ public class Slate extends View {
         private SpotFilter mCoordBuffer;
         private SmoothStroker mRenderer;
         
+        private float mLastPressure = -1f;
+        
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
             mRenderer = new SmoothStroker();
@@ -89,16 +91,27 @@ public class Slate extends View {
         }
         
         public void finish(long time) {
+            mLastPressure = -1f;
             mCoordBuffer.finish();
             mRenderer.reset();
         }
 
         public void addCoords(MotionEvent.PointerCoords pt, long time) {
             mCoordBuffer.add(pt, time);
+            mLastPressure = pt.pressure;
         }
         
         public void add(Spot s) {
             mCoordBuffer.add(s);
+            mLastPressure = s.pressure;
+        }
+        
+        public float getRadius() {
+            return mRenderer.getRadius();
+        }
+
+        public float getLastPressure() {
+            return mLastPressure;
         }
     }
     
@@ -268,10 +281,75 @@ public class Slate extends View {
     public int getDebugFlags() { return mDebugFlags; }
     public void setDebugFlags(int f) {
         if (f != mDebugFlags) {
-            // XXX
+            mDebugFlags = f;
+            invalidate();
         }
+    }
+    
+    private Bitmap mStrokeDebugGraph;
+    private int mGraphX = 0;
+    private Paint mGraphPaint1;
+    private void drawStrokeDebugInfo(Canvas c) {
+        final int ROW_HEIGHT = 24;
+        final int ROW_MARGIN = 6;
+        final int COLUMN_WIDTH = 45;
+        
+        final float FIRM_PRESSURE_LOW = 0.85f;
+        final float FIRM_PRESSURE_HIGH = 1.25f;
+        
+        if (mStrokeDebugGraph == null) {
+            mStrokeDebugGraph = Bitmap.createBitmap(c.getWidth() - 128, ROW_HEIGHT * mStrokes.length + 2 * ROW_MARGIN, Bitmap.Config.ARGB_8888);
+            mGraphPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+        }
+        
+        Canvas graph = new Canvas(mStrokeDebugGraph);
+        graph.save();
+        graph.clipRect(new Rect(0, 0, COLUMN_WIDTH, graph.getHeight()));
+        graph.drawColor(0, PorterDuff.Mode.CLEAR);
+        graph.restore();
+        
+        int left = 4;
+        int bottom = graph.getHeight() - ROW_MARGIN;
+        final int STEP = 4; 
+        for (MarkersPlotter st : mStrokes) {
+            float r = st.getLastPressure();
+            
+            if (r >= FIRM_PRESSURE_LOW && r <= FIRM_PRESSURE_HIGH) 
+                mGraphPaint1.setColor(0xFF33FF33);
+            else if (r < FIRM_PRESSURE_LOW)
+                mGraphPaint1.setColor(0xFF808080);
+            else
+                mGraphPaint1.setColor(0xFFFF8000);
 
-        mDebugFlags = f;
+            String s = (r < 0) ? "--" : String.format("%.4f", r);
+            
+            graph.drawText(s, left, bottom - 2, mGraphPaint1);
+            
+            if (mGraphX + COLUMN_WIDTH > graph.getWidth()) {
+                mGraphX = 0;
+                graph.save();
+                graph.clipRect(new Rect(30, 0, graph.getWidth(), graph.getHeight()));
+                graph.drawColor(0, PorterDuff.Mode.CLEAR);
+                graph.restore();
+            }
+            
+            if (r >= 0) {
+                int barsize = (int)(r * ROW_HEIGHT);
+                graph.drawRect(mGraphX + COLUMN_WIDTH, bottom - barsize, 
+                        mGraphX + COLUMN_WIDTH + STEP, bottom, mGraphPaint1);
+            } else {
+                graph.drawPoint(mGraphX + COLUMN_WIDTH + STEP, bottom, mGraphPaint1);
+            }
+            bottom -= (ROW_HEIGHT + ROW_MARGIN);
+        }
+        
+        mGraphX += STEP;
+        
+        final int x = 64;
+        final int y = 64;
+        
+        c.drawBitmap(mStrokeDebugGraph, x, y, null);
+        invalidate(new Rect(x, y, x+c.getWidth(), y+c.getHeight()));
     }
 
     public void commitStroke() {
@@ -375,6 +453,14 @@ public class Slate extends View {
     protected void onDraw(Canvas canvas) {
         if (mCurrentBitmap != null) {
             canvas.drawBitmap(mCurrentBitmap, 0, 0, null);
+            
+            if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
+                drawStrokeDebugInfo(canvas);
+            }
+            
+            if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
+                mPressureCooker.drawDebug(canvas);
+            }
         }
     }
 

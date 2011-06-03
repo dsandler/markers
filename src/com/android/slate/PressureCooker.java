@@ -26,6 +26,9 @@ class PressureCooker {
     public static final float PRESSURE_UPDATE_DECAY = 0.1f;
     public static final int PRESSURE_UPDATE_STEPS_FIRSTBOOT = 100; // points, a quick-training regimen
     public static final int PRESSURE_UPDATE_STEPS_NORMAL = 1000; // points, in normal use
+
+    private static final boolean PARTNER_HACK = false;
+    
     private int mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
     private int mPressureUpdateCountdown = mPressureCountdownStart;
     private float mPressureRecentMin = 1;
@@ -61,6 +64,10 @@ class PressureCooker {
     
     // Adjusts pressure values on the fly based on historical maxima/minima.
     public float getAdjustedPressure(float pressure) {
+        if (PARTNER_HACK) {
+            return pressure; 
+        }
+        
         mLastPressure = pressure;
         if (pressure < mPressureRecentMin) mPressureRecentMin = pressure;
         if (pressure > mPressureRecentMax) mPressureRecentMax = pressure;
@@ -103,23 +110,14 @@ class PressureCooker {
     }
     
     public void drawDebug(Canvas canvas) {
-      StringBuffer strokeInfo = new StringBuffer();
-      /*for (SmoothStroker st : mStrokes) {
-          final float r = st.getRadius();
-          strokeInfo.append(
-              (r < 0)
-                  ? "[-] "
-                  : String.format("[%.1f] ", r));
-      }*/
-
-      canvas.drawText(
-              String.format("p: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d", 
+        if (PARTNER_HACK) return;
+        canvas.drawText(
+              String.format("[pressurecooker] pressure: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d", 
                       mLastPressure,
                       mPressureMin, mPressureMax,
                       mPressureRecentMin, mPressureRecentMax,
                       mPressureUpdateCountdown),
-                  52, canvas.getHeight() - 64, mDebugPaint);
-      canvas.drawText(strokeInfo.toString(), 52, canvas.getHeight() - 52, mDebugPaint);
+                  64, canvas.getHeight() - 64, mDebugPaint);
     }
 
     public void setFirstRun(boolean firstRun) {
