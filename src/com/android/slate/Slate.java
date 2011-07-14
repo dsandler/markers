@@ -395,7 +395,7 @@ public class Slate extends View {
         	        event.getX(j),
         			event.getY(j),
         			event.getSize(j),
-        			event.getPressure(j),
+        			event.getPressure(j) + event.getSize(j),
         			time
         			);
             mStrokes[event.getPointerId(j)].add(mTmpSpot);
@@ -413,7 +413,8 @@ public class Slate extends View {
                 			event.getHistoricalX(j, i),
                 			event.getHistoricalY(j, i),
                 			event.getHistoricalSize(j, i),
-                			event.getHistoricalPressure(j, i),
+                			event.getHistoricalPressure(j, i)
+                                + event.getHistoricalSize(j, i),
                 			event.getHistoricalEventTime(i)
                 			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
@@ -432,7 +433,7 @@ public class Slate extends View {
             			event.getX(j),
             			event.getY(j),
             			event.getSize(j),
-            			event.getPressure(j),
+            			event.getPressure(j) + event.getSize(j),
             			time
             			);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
