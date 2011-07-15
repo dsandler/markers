@@ -54,6 +54,8 @@ public class Slate extends View {
     private final Paint mDebugPaints[] = new Paint[10];
     
     private PressureCooker mPressureCooker;
+    
+    private boolean mEmpty;
 
     private class MarkersPlotter implements SpotFilter.Plotter {
         // Plotter receives pointer coordinates and draws them.
@@ -210,6 +212,8 @@ public class Slate extends View {
     }
     
     private void init() {
+        mEmpty = true;
+        
         for (int i=0; i<mStrokes.length; i++) {
             mStrokes[i] = new MarkersPlotter();
         }
@@ -235,6 +239,8 @@ public class Slate extends View {
         }
     }
 
+    public boolean isEmpty() { return mEmpty; }
+    
     public void setPenSize(float min, float max) {
         mRadiusMin = min * 0.5f;
         mRadiusMax = max * 0.5f;
@@ -256,6 +262,7 @@ public class Slate extends View {
         commitStroke();
         mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
         invalidate();
+        mEmpty = true;
     }
 
     public int getDebugFlags() { return mDebugFlags; }
@@ -338,6 +345,8 @@ public class Slate extends View {
             b.toString(), b.getWidth(), b.getHeight(),
             mPreviousBitmap.toString(), mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight(),
             mPreviousCanvas.toString()));
+
+        mEmpty = false;
     }
 
     public void setPenColor(int color) {
@@ -382,7 +391,9 @@ public class Slate extends View {
         int N = event.getHistorySize();
         int P = event.getPointerCount();
         long time = event.getEventTime();
-        
+
+        mEmpty = false;
+
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
             commitStroke();

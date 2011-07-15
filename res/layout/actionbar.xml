@@ -7,18 +7,19 @@
   >
   <RelativeLayout
   	android:id="@+id/actionbar_contents"
+    style="@style/ActionBar.Bar"
   	android:layout_width="match_parent"
   	android:layout_height="match_parent"
   	android:layout_alignParentLeft="true"
   	android:visibility="gone"
   	android:padding="2dp"
   	android:paddingRight="6dp"
-  	android:background="#40808080"
   	android:clickable="true"
   	android:soundEffectsEnabled="false"
   	>
 	  <TextView
 	    android:id="@+id/logotype"
+        style="@style/ActionBar.Text"
 	    android:text="@string/app_name"
 	    android:layout_width="wrap_content"
 	    android:layout_height="match_parent"
@@ -26,8 +27,6 @@
 	    android:layout_alignParentLeft="true"
 	    android:layout_centerVertical="true" 
 	  	android:layout_marginLeft="@dimen/action_bar_logo_width"
-  		style="@android:style/TextAppearance.Large"
-	    android:textColor="#60000000"
 	    />
 	  
       <LinearLayout android:orientation="horizontal"
@@ -35,53 +34,70 @@
           android:layout_width="wrap_content"
           android:layout_alignParentRight="true"
           >
-          <Button
+          <ImageButton
             android:id="@+id/debug"
+            style="@style/ActionBar.Icon"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent" 
-            android:text="Debug"
+            android:layout_height="match_parent"
+            android:src="@drawable/bug" 
+            android:contentDescription="debug mode"
             android:onClick="clickDebug"
-            style="@style/ActionBar.Button"
-            />  
-          <Button
+            />
+          <ImageView 
+            android:src="@drawable/divider" 
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            />
+          <ImageButton
             android:id="@+id/undo"
+            android:src="@drawable/undo"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" 
-            android:text="Undo"
+            android:contentDescription="undo"
             android:onClick="clickUndo"
-            style="@style/ActionBar.Button"
+            style="@style/ActionBar.Icon"
             />  
-    	  <Button
-    	  	android:id="@+id/clear"
-    	  	android:layout_width="wrap_content"
-    	  	android:layout_height="match_parent" 
-    	  	android:text="Clear"
-    	  	android:onClick="clickClear"
-    	  	style="@style/ActionBar.Button"
-    	  	/>  
-          <Button
-            android:id="@+id/load" 
+          <ImageView 
+            android:src="@drawable/divider" 
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            />
+          <ImageButton
+            android:id="@+id/load"
+            android:src="@drawable/load"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" 
-            android:text="Load"
+            android:contentDescription="load image"
             android:onClick="clickLoad"
-            style="@style/ActionBar.Button"
+            style="@style/ActionBar.Icon"
             />  
-          <Button
+          <ImageView 
+            android:src="@drawable/divider" 
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            />
+          <ImageButton
             android:id="@+id/save" 
+            android:src="@drawable/newpage3"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" 
-            android:text="Save"
-            android:onClick="clickSave"
-            style="@style/ActionBar.Button"
+            android:contentDescription="new drawing"
+            android:onClick="clickSaveAndClear"
+            style="@style/ActionBar.Icon"
             />  
-          <Button
+          <ImageView 
+            android:src="@drawable/divider" 
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            />
+          <ImageButton
             android:id="@+id/share" 
+            android:src="@drawable/share"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" 
-            android:text="Share"
+            android:contentDescription="share drawing"
             android:onClick="clickShare"
-            style="@style/ActionBar.Button"
+            style="@style/ActionBar.Icon"
             />  
       </LinearLayout>
   </RelativeLayout>

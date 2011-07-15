@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="ActionBar">
+        <item name="android:textSize">@dimen/ui_font_size</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+    </style>
+    <style name="ActionBar.Bar">
+        <item name="android:background">#A0333333</item>
+    </style>
+    <style name="ActionBar.Text">
+        <item name="android:background">@null</item>
+    </style>
     <style name="ActionBar.Button" parent="@android:style/Widget.Button.Small">
-            <item name="android:background">#60000000</item>
-            <item name="android:textColor">#FFFFFFFF</item>
-            <item name="android:textSize">@dimen/ui_font_size</item>
-            <item name="android:layout_margin">2dp</item>
-            <item name="android:paddingLeft">8dp</item>
-            <item name="android:paddingRight">8dp</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textSize">@dimen/ui_font_size</item>
+        <item name="android:layout_margin">2dp</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+    <style name="ActionBar.Icon">
+        <item name="android:background">@null</item>
+        <item name="android:scaleType">centerInside</item>
     </style>
 </resources>

@@ -1,6 +1,7 @@
 package com.google.android.markersbeta;
 
 import android.animation.Animator;
+import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
@@ -14,8 +15,10 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,6 +31,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.AnimationSet;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -115,8 +120,9 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         if (mSlate == null) {
         	mSlate = new Slate(this);
         }
-        ((ViewGroup)findViewById(R.id.root)).addView(mSlate, 0);
-
+        final ViewGroup root = ((ViewGroup)findViewById(R.id.root));
+        root.addView(mSlate, 0);
+        
         if (icicle != null) {
             onRestoreInstanceState(icicle);
         }
@@ -231,7 +237,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         super.onStop();
 
         saveDrawing(WIP_FILENAME, true);
-        mSlate.recycle();
+        //mSlate.recycle(); -- interferes with newly asynchronous saving code when sharing
     }
 
     @Override
@@ -328,65 +334,140 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         return false;
     }
 
-    public String saveDrawing(String filename) {
-        return saveDrawing(filename, false);
+    public void saveDrawing(String filename) {
+        saveDrawing(filename, false);
     }
-    
-    public String saveDrawing(String filename, boolean temporary) {
-        String fn = null;
-        Bitmap bits = mSlate.getBitmap();
+
+    public void saveDrawing(String filename, boolean temporary) {
+        saveDrawing(filename, temporary, /*animate=*/ false, /*share=*/ false, /*clear=*/ false);
+    }
+
+    public void saveDrawing(String filename, boolean temporary, boolean animate, boolean share, boolean clear) {
+        final Bitmap bits = mSlate.getBitmap();
         if (bits == null) {
             Log.e(TAG, "save: null bitmap");
-            return null;
+            return;
         }
+        
+        final String _filename = filename;
+        final boolean _temporary = temporary;
+        final boolean _animate = animate;
+        final boolean _share = share;
+        final boolean _clear = clear;
 
-        try {
-            File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
-            if (!d.exists()) {
-                if (d.mkdirs()) {
-                    new FileOutputStream(new File(d, ".nomedia")).write('\n');
-                } else {
-                    throw new IOException("cannot create dirs: " + d);
+        new AsyncTask<Void,Void,String>() {
+            @Override
+            protected String doInBackground(Void... params) {
+                String fn = null;
+                try {
+                    File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                    d = new File(d, _temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
+                    if (!d.exists()) {
+                        if (d.mkdirs()) {
+                            new FileOutputStream(new File(d, ".nomedia")).write('\n');
+                        } else {
+                            throw new IOException("cannot create dirs: " + d);
+                        }
+                    }
+                    File file = new File(d, _filename);
+                    Log.d(TAG, "save: saving " + file);
+                    OutputStream os = new FileOutputStream(file);
+                    bits.compress(Bitmap.CompressFormat.PNG, 0, os);
+                    os.close();
+                    
+                    fn = file.toString();
+                } catch (IOException e) {
+                    Log.e(TAG, "save: error: " + e);
+                }
+                return fn;
+            }
+            
+            @Override
+            protected void onPostExecute(String fn) {
+                if (_share && fn != null) {
+                    Uri streamUri = Uri.fromFile(new File(fn));
+                    Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                    sendIntent.setType("image/jpeg");
+                    sendIntent.putExtra(Intent.EXTRA_STREAM, streamUri);
+                    startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
+                }
+                
+                if (_animate && hasAnimations()) {
+                    /*
+                    final View onion = findViewById(R.id.drawingAnimation);
+                    onion.setBackgroundDrawable(new BitmapDrawable(getResources(), bits));
+                    //onion.setBackgroundColor(0xFFFF0000);
+                    onion.setVisibility(View.VISIBLE);
+                    AnimatorSet a = new AnimatorSet();
+                    a.play(ObjectAnimator.ofFloat(onion, "scaleX", 1.0f, 0.8f))
+                     .with(ObjectAnimator.ofFloat(onion, "scaleY", 1.0f, 0.8f))
+                     .with(ObjectAnimator.ofFloat(onion, "alpha", 1.0f, 0f));
+                    a.addListener(new AnimatorListenerAdapter() {
+                        public void onAnimationEnd(Animator a) {
+                            onion.setVisibility(View.GONE);
+                            onion.setBackgroundDrawable(null);
+                        }
+                    });
+                    a.setDuration(5000);
+                    a.start();
+                    */
+                    AnimatorSet a = new AnimatorSet();
+                    a.play(ObjectAnimator.ofFloat(mSlate, "scaleX", 1.0f, 0.8f))
+                     .with(ObjectAnimator.ofFloat(mSlate, "scaleY", 1.0f, 0.8f))
+                     .with(ObjectAnimator.ofFloat(mSlate, "alpha", 1.0f, 0f));
+                    a.addListener(new AnimatorListenerAdapter() {
+                        public void onAnimationEnd(Animator a) {
+                            mSlate.setVisibility(View.INVISIBLE);
+                            mSlate.setScaleX(1.0f);
+                            mSlate.setScaleY(1.0f);
+                            mSlate.setAlpha(1.0f);
+
+                            if (_clear) {
+                                // maybe we could just start here in the onPostExecute, so the animation covers the save time
+                                mSlate.clear();
+                            }
+                            
+                            mSlate.setVisibility(View.VISIBLE);
+                        }
+                    });
+                    a.setInterpolator(new AccelerateInterpolator(3.0f));
+                    a.setDuration(1000);
+                    a.start();
+                } else if (_clear) {
+                    mSlate.clear();
+                }
+                
+                if (!_temporary) {
+                    MediaScannerConnection.scanFile(MarkersActivity.this,
+                            new String[] { fn }, null, null
+                            );
                 }
             }
-            File file = new File(d, filename);
-            Log.d(TAG, "save: saving " + file);
-            OutputStream os = new FileOutputStream(file);
-            bits.compress(Bitmap.CompressFormat.PNG, 0, os);
-            os.close();
-            fn = file.toString();
-            if (!temporary) {
-                MediaScannerConnection.scanFile(this,
-                        new String[] { fn }, null, null
-                        );
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "save: error: " + e);
-        }
-        return fn;
+        }.execute();
+        
     }
 
     public void clickSave(View v) {
+        if (mSlate.isEmpty()) return;
+        
         v.setEnabled(false);
-        String fn = saveDrawing(System.currentTimeMillis() + ".png");
+        saveDrawing(System.currentTimeMillis() + ".png");
         v.setEnabled(true);
-        if (fn != null) {
-            Toast.makeText(this, "Saved to " + fn, Toast.LENGTH_SHORT).show();
-        }
+    }
+
+    public void clickSaveAndClear(View v) {
+        if (mSlate.isEmpty()) return;
+
+        v.setEnabled(false);
+        saveDrawing(System.currentTimeMillis() + ".png", 
+                /*temporary=*/ false, /*animate=*/ true, /*share=*/ false, /*clear=*/ true);
+        v.setEnabled(true);
     }
 
     public void clickShare(View v) {
         v.setEnabled(false);
-        String fn = saveDrawing("from_markers.png", true);
+        saveDrawing("from_markers.png", /*temporary=*/ true, /*animate=*/ false, /*share=*/ true, /*clear=*/ false);
         v.setEnabled(true);
-        if (fn != null) {
-            Uri streamUri = Uri.fromFile(new File(fn));
-            Intent sendIntent = new Intent(Intent.ACTION_SEND);
-            sendIntent.setType("image/jpeg");
-            sendIntent.putExtra(Intent.EXTRA_STREAM, streamUri);
-            startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
-        }
     }
 
     public void clickLoad(View v) {
