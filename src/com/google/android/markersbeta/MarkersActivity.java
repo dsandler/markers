@@ -149,6 +149,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 return true;
             }
         });
+        
+        setActionBarVisibility(false, false);
 
         clickColor(colors.getChildAt(0));
 
@@ -261,7 +263,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
-            setActionBarVisibility(!getActionBarVisibility());
+            setActionBarVisibility(!getActionBarVisibility(), true);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -272,7 +274,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     }
 
     public void clickLogo(View v) {
-        setActionBarVisibility(!getActionBarVisibility());
+        setActionBarVisibility(!getActionBarVisibility(), true);
     }
 
     public boolean getActionBarVisibility() {
@@ -280,11 +282,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         return bar.getVisibility() == View.VISIBLE;
     }
 
-    public void setActionBarVisibility(boolean show) {
+    public void setActionBarVisibility(boolean show, boolean animate) {
         final View bar = findViewById(R.id.actionbar_contents);
         final View logo = findViewById(R.id.logo);
         if (!show) {
-            if (hasAnimations()) {
+            if (hasAnimations() && animate) {
                 ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f).start();
                 ObjectAnimator.ofFloat(bar, "translationY", 0f, -20f).start();
                 Animator a = ObjectAnimator.ofFloat(bar, "alpha", 1f, 0f);
@@ -299,7 +301,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             }
         } else {
             bar.setVisibility(View.VISIBLE);
-            if (hasAnimations()) {
+            if (hasAnimations() && animate) {
                 ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f).start();
                 ObjectAnimator.ofFloat(bar, "translationY", -20f, 0f).start();
                 ObjectAnimator.ofFloat(bar, "alpha", 0f, 1f).start();
@@ -392,50 +394,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                     startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
                 }
                 
-                if (_animate && hasAnimations()) {
-                    /*
-                    final View onion = findViewById(R.id.drawingAnimation);
-                    onion.setBackgroundDrawable(new BitmapDrawable(getResources(), bits));
-                    //onion.setBackgroundColor(0xFFFF0000);
-                    onion.setVisibility(View.VISIBLE);
-                    AnimatorSet a = new AnimatorSet();
-                    a.play(ObjectAnimator.ofFloat(onion, "scaleX", 1.0f, 0.8f))
-                     .with(ObjectAnimator.ofFloat(onion, "scaleY", 1.0f, 0.8f))
-                     .with(ObjectAnimator.ofFloat(onion, "alpha", 1.0f, 0f));
-                    a.addListener(new AnimatorListenerAdapter() {
-                        public void onAnimationEnd(Animator a) {
-                            onion.setVisibility(View.GONE);
-                            onion.setBackgroundDrawable(null);
-                        }
-                    });
-                    a.setDuration(5000);
-                    a.start();
-                    */
-                    AnimatorSet a = new AnimatorSet();
-                    a.play(ObjectAnimator.ofFloat(mSlate, "scaleX", 1.0f, 0.8f))
-                     .with(ObjectAnimator.ofFloat(mSlate, "scaleY", 1.0f, 0.8f))
-                     .with(ObjectAnimator.ofFloat(mSlate, "alpha", 1.0f, 0f));
-                    a.addListener(new AnimatorListenerAdapter() {
-                        public void onAnimationEnd(Animator a) {
-                            mSlate.setVisibility(View.INVISIBLE);
-                            mSlate.setScaleX(1.0f);
-                            mSlate.setScaleY(1.0f);
-                            mSlate.setAlpha(1.0f);
-
-                            if (_clear) {
-                                // maybe we could just start here in the onPostExecute, so the animation covers the save time
-                                mSlate.clear();
-                            }
-                            
-                            mSlate.setVisibility(View.VISIBLE);
-                        }
-                    });
-                    a.setInterpolator(new AccelerateInterpolator(3.0f));
-                    a.setDuration(1000);
-                    a.start();
-                } else if (_clear) {
-                    mSlate.clear();
-                }
+                mSlate.clear();
                 
                 if (!_temporary) {
                     MediaScannerConnection.scanFile(MarkersActivity.this,
@@ -452,6 +411,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         
         v.setEnabled(false);
         saveDrawing(System.currentTimeMillis() + ".png");
+        Toast.makeText(this, "Drawing saved.", Toast.LENGTH_SHORT).show();
         v.setEnabled(true);
     }
 
@@ -461,6 +421,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         v.setEnabled(false);
         saveDrawing(System.currentTimeMillis() + ".png", 
                 /*temporary=*/ false, /*animate=*/ true, /*share=*/ false, /*clear=*/ true);
+        Toast.makeText(this, "Drawing saved.", Toast.LENGTH_SHORT).show();
         v.setEnabled(true);
     }
 

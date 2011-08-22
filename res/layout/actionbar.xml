@@ -11,9 +11,6 @@
   	android:layout_width="match_parent"
   	android:layout_height="match_parent"
   	android:layout_alignParentLeft="true"
-  	android:visibility="gone"
-  	android:padding="2dp"
-  	android:paddingRight="6dp"
   	android:clickable="true"
   	android:soundEffectsEnabled="false"
   	>
@@ -27,6 +24,7 @@
 	    android:layout_alignParentLeft="true"
 	    android:layout_centerVertical="true" 
 	  	android:layout_marginLeft="@dimen/action_bar_logo_width"
+	  	android:paddingLeft="2dp"
 	    />
 	  
       <LinearLayout android:orientation="horizontal"
@@ -39,14 +37,9 @@
             style="@style/ActionBar.Icon"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:src="@drawable/bug" 
+            android:src="@drawable/doodlebug" 
             android:contentDescription="debug mode"
             android:onClick="clickDebug"
-            />
-          <ImageView 
-            android:src="@drawable/divider" 
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
             />
           <ImageButton
             android:id="@+id/undo"
@@ -57,11 +50,6 @@
             android:onClick="clickUndo"
             style="@style/ActionBar.Icon"
             />  
-          <ImageView 
-            android:src="@drawable/divider" 
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            />
           <ImageButton
             android:id="@+id/load"
             android:src="@drawable/load"
@@ -71,25 +59,24 @@
             android:onClick="clickLoad"
             style="@style/ActionBar.Icon"
             />  
-          <ImageView 
-            android:src="@drawable/divider" 
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            />
           <ImageButton
-            android:id="@+id/save" 
-            android:src="@drawable/newpage3"
+            android:id="@+id/clear" 
+            android:src="@drawable/scribble"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" 
-            android:contentDescription="new drawing"
-            android:onClick="clickSaveAndClear"
+            android:contentDescription="erase drawing"
+            android:onClick="clickClear"
             style="@style/ActionBar.Icon"
             />  
-          <ImageView 
-            android:src="@drawable/divider" 
+          <ImageButton
+            android:id="@+id/save" 
+            android:src="@drawable/newpage"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            />
+            android:layout_height="match_parent" 
+            android:contentDescription="save drawing"
+            android:onClick="clickSave"
+            style="@style/ActionBar.Icon"
+            />  
           <ImageButton
             android:id="@+id/share" 
             android:src="@drawable/share"
