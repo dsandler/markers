@@ -8,5 +8,6 @@
     <color name="btn_selected_fg">#FFCCCCCC</color>
     
     <drawable name="actionbar_button_bg">#00000000</drawable>
-    <drawable name="actionbar_button_pressed_bg">@color/btn_pressed_bg</drawable>
+    <drawable name="actionbar_button_pressed_bg">#60FFFFFF</drawable>
+    <drawable name="actionbar_button_selected_bg">#CCFFCC00</drawable>
 </resources>

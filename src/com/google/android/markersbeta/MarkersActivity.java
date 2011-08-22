@@ -77,6 +77,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     protected ToolButton mLastTool, mActiveTool;
 
+    View mDebugButton;
+
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
             super(c, as);
@@ -191,6 +193,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         
         mLastTool = mActiveTool = (penThickButton != null) ? penThickButton : penThinButton;
         mActiveTool.click();
+        
+        mDebugButton = findViewById(R.id.debug);
    }
 
     // MrShaky.Listener
@@ -437,9 +441,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         startActivityForResult(i, LOAD_IMAGE); 
     }
     public void clickDebug(View v) {
-        mSlate.setDebugFlags(mSlate.getDebugFlags() == 0 
+        boolean debugMode = (mSlate.getDebugFlags() == 0); // toggle 
+        mSlate.setDebugFlags(debugMode
             ? Slate.FLAG_DEBUG_EVERYTHING
             : 0);
+        mDebugButton.setSelected(debugMode);
         Toast.makeText(this, "Debug mode " + ((mSlate.getDebugFlags() == 0) ? "off" : "on"),
             Toast.LENGTH_SHORT).show();
     }
