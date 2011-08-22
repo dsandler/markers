@@ -345,7 +345,7 @@ public class Slate extends View {
         
         mGraphX += STEP;
         
-        final int x = 64;
+        final int x = 96;
         final int y = 64;
         
         c.drawBitmap(mStrokeDebugGraph, x, y, null);

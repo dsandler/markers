@@ -117,7 +117,7 @@ class PressureCooker {
                       mPressureMin, mPressureMax,
                       mPressureRecentMin, mPressureRecentMax,
                       mPressureUpdateCountdown),
-                  64, canvas.getHeight() - 64, mDebugPaint);
+                  96, canvas.getHeight() - 64, mDebugPaint);
     }
 
     public void setFirstRun(boolean firstRun) {

@@ -20,9 +20,9 @@
     <style name="ActionBar.Icon">
         <item name="android:background">@drawable/action_button_bg</item>
         <item name="android:scaleType">centerInside</item>
-        <item name="android:paddingLeft">4dp</item>
-        <item name="android:paddingRight">4dp</item>
-        <item name="android:paddingTop">2dp</item>
-        <item name="android:paddingBottom">2dp</item>
+        <item name="android:paddingLeft">@dimen/action_button_padding_h</item>
+        <item name="android:paddingRight">@dimen/action_button_padding_h</item>
+        <item name="android:paddingTop">@dimen/action_button_padding_v</item>
+        <item name="android:paddingBottom">@dimen/action_button_padding_v</item>
     </style>
 </resources>
