@@ -373,7 +373,9 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                     d = new File(d, _temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
                     if (!d.exists()) {
                         if (d.mkdirs()) {
-                            new FileOutputStream(new File(d, ".nomedia")).write('\n');
+                            if (_temporary) {
+                                new FileOutputStream(new File(d, ".nomedia")).write('\n');
+                            }
                         } else {
                             throw new IOException("cannot create dirs: " + d);
                         }
