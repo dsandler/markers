@@ -214,6 +214,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     public void onPause() {
         super.onPause();
+        saveDrawing(WIP_FILENAME, true);
         mShaky.pause();
     }
 
@@ -247,7 +248,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     protected void onStop() {
         super.onStop();
 
-        saveDrawing(WIP_FILENAME, true);
         //mSlate.recycle(); -- interferes with newly asynchronous saving code when sharing
     }
 
