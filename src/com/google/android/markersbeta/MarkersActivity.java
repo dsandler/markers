@@ -403,7 +403,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                     startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
                 }
                 
-                mSlate.clear();
+                if (_clear) mSlate.clear();
                 
                 if (!_temporary) {
                     MediaScannerConnection.scanFile(MarkersActivity.this,
