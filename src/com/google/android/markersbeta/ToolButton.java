@@ -71,17 +71,19 @@ public class ToolButton extends View {
             
             final float r1 = strokeWidthMin * 0.5f;
             final float r2 = strokeWidthMax * 0.5f;
-            final float start = getPaddingTop() + r1;
-            final float end = getHeight() - getPaddingBottom() - r2;
-            final float center = getWidth() / 2;
-            final float iter = 1f / getHeight();
+            final boolean vertical = getHeight() > getWidth();
+            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
+            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+            final float center = (vertical ? getWidth() : getHeight()) / 2;
+            final float iter = 1f / (vertical ? getHeight() : getWidth());
+            final float amplitude = (center-r2)*0.5f;
             for (float f = 0f; f < 1.0f; f += iter) {
                 final float y = com.android.slate.Slate.lerp(start, end, f);
-                final float x = (float) (center + 0.5*center*Math.sin(f * 2*Math.PI));
+                final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
                 final float r = com.android.slate.Slate.lerp(r1, r2, f);
-                canvas.drawCircle(x, y, r, pt);
+                canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, pt);
             }
-            canvas.drawCircle(center, end, r2, pt);
+            canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
         }
     }
 

@@ -152,7 +152,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             }
         });
         
-        setActionBarVisibility(false, false);
+        setHUDVisibility(false, false);
 
         clickColor(colors.getChildAt(0));
 
@@ -269,7 +269,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
-            setActionBarVisibility(!getActionBarVisibility(), true);
+            setHUDVisibility(!getHUDVisibility(), true);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -280,37 +280,35 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     }
 
     public void clickLogo(View v) {
-        setActionBarVisibility(!getActionBarVisibility(), true);
+        setHUDVisibility(!getHUDVisibility(), true);
     }
 
-    public boolean getActionBarVisibility() {
-        final View bar = findViewById(R.id.actionbar_contents);
+    public boolean getHUDVisibility() {
+        final View bar = findViewById(R.id.hud);
         return bar.getVisibility() == View.VISIBLE;
     }
 
-    public void setActionBarVisibility(boolean show, boolean animate) {
-        final View bar = findViewById(R.id.actionbar_contents);
+    public void setHUDVisibility(boolean show, boolean animate) {
+        final View hud = findViewById(R.id.hud);
         final View logo = findViewById(R.id.logo);
         if (!show) {
             if (hasAnimations() && animate) {
                 ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f).start();
-                ObjectAnimator.ofFloat(bar, "translationY", 0f, -20f).start();
-                Animator a = ObjectAnimator.ofFloat(bar, "alpha", 1f, 0f);
+                Animator a = ObjectAnimator.ofFloat(hud, "alpha", 1f, 0f);
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
-                        bar.setVisibility(View.GONE);
+                        hud.setVisibility(View.GONE);
                     }
                 });
                 a.start();
             } else {
-                bar.setVisibility(View.GONE);
+                hud.setVisibility(View.GONE);
             }
         } else {
-            bar.setVisibility(View.VISIBLE);
+            hud.setVisibility(View.VISIBLE);
             if (hasAnimations() && animate) {
                 ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f).start();
-                ObjectAnimator.ofFloat(bar, "translationY", -20f, 0f).start();
-                ObjectAnimator.ofFloat(bar, "alpha", 0f, 1f).start();
+                ObjectAnimator.ofFloat(hud, "alpha", 0f, 1f).start();
             }
         }
     }

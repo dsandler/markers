@@ -3,14 +3,15 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.markersbeta"
     class="com.google.android.markersbeta.MarkersActivity$ColorList"
+    style="@style/ActionBar.Bar"
     android:id="@+id/colors"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:layout_alignParentBottom="true"
     android:layout_centerHorizontal="true"
-    android:background="#80606060"
     android:clickable="true"
+    android:paddingTop="4dp"
     >
     <Button
         android:id="@+id/black"

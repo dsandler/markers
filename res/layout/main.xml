@@ -1,27 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout 
+<FrameLayout 
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.markersbeta"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/root"
     >
-        
-	<include layout="@layout/actionbar"
-		android:layout_width="match_parent"
-		android:layout_height="@dimen/action_bar_height"
-		/>
-		
-	<include layout="@layout/tools"
-		android:layout_width="@dimen/action_bar_logo_width"
-		android:layout_height="160dp"
-		android:layout_alignParentLeft="true"
-		android:layout_centerVertical="true"
-		/>
-		
-	<include layout="@layout/colors"
-		android:layout_width="match_parent"
-		android:layout_height="@dimen/button_bar_height"
-		android:layout_alignParentBottom="true"
-		/>
-</RelativeLayout>
+    
+    <RelativeLayout
+        android:id="@+id/hud"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        >
+    	<include layout="@layout/actionbar"
+    		android:layout_width="match_parent"
+    		android:layout_height="@dimen/action_bar_height"
+    		/>
+    		
+    	<include layout="@layout/colors"
+    		android:layout_width="match_parent"
+    		android:layout_height="@dimen/button_bar_height"
+    		android:layout_alignParentBottom="true"
+    		/>
+    	
+        <include layout="@layout/tools"
+    		android:layout_width="85dp"
+    		android:layout_height="match_parent"
+            android:layout_below="@+id/actionbar"
+            android:layout_above="@+id/colors"
+    		android:layout_alignParentLeft="true"
+    		android:layout_centerVertical="true"
+    		/>
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/logo"
+        android:src="@drawable/icon"
+        android:layout_width="@dimen/action_bar_logo_width"
+        android:layout_height="@dimen/action_bar_height"
+        android:padding="2dp"
+        android:onClick="clickLogo"
+        android:alpha="0.5"
+        android:layout_gravity="top|left"
+        />
+    
+</FrameLayout>

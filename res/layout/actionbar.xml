@@ -88,14 +88,4 @@
             />  
       </LinearLayout>
   </RelativeLayout>
-  <ImageView
-  	android:id="@+id/logo"
-  	android:src="@drawable/icon"
-  	android:layout_width="@dimen/action_bar_logo_width"
-  	android:layout_height="@dimen/action_bar_height"
-  	android:layout_alignParentLeft="true"
-  	android:padding="2dp"
-  	android:onClick="clickLogo"
-  	android:alpha="0.5"
-  	/>
 </RelativeLayout>
