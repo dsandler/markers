@@ -87,7 +87,10 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         @Override
         protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
             super.onLayout(changed, left, top, right, bottom);
-            if (changed) setOrientation(((right-left) > (bottom-top)) ? HORIZONTAL : VERTICAL);
+            int newOrientation = (((right-left) > (bottom-top)) ? HORIZONTAL : VERTICAL);
+            if (newOrientation != getOrientation()) {
+                setOrientation(newOrientation);
+            }
         }
 
         @Override
