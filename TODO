@@ -1,0 +1,6 @@
+cp colors.xml layout-large/colors.xml and reformat per matias' recommendation
+	- convert all color swatches to ColorSwatchButton
+	  - use markers:color="#FF000000" 
+	  - remove drag-rainbow-mode
+	  - possibly add quick size animation to emphasize selection
+	  - create proper selection indication
