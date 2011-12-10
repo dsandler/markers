@@ -7,7 +7,7 @@
 	android:orientation="vertical"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-    android:paddingRight="4dp"
+    android:paddingRight="@dimen/tool_palette_gutter"
 	>
        <view
            class="com.google.android.markersbeta.ToolButton$PenToolButton"

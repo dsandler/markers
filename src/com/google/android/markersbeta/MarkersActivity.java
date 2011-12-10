@@ -59,16 +59,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     private static final String PREFS_NAME = "MarkersPrefs";
 
-    private static final int[] BUTTON_COLORS = {
-        0xFF000000,
-        0xFFFFFFFF,
-        0xFFC0C0C0,0xFF808080,
-        0xFF404040,0xFFFF0000,
-        0xFF00FF00,0xFF0000FF,
-        0xFFFF00CC,0xFFFF8000,
-        0xFFFFFF00,0xFF6000A0,0xFF804000,
-    };
-
     Slate mSlate;
 
     MrShaky mShaky;
@@ -78,6 +68,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     protected ToolButton mLastTool, mActiveTool;
 
     View mDebugButton;
+
+    protected ToolButton mLastColor, mActiveColor;
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -103,6 +95,20 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public Object onRetainNonConfigurationInstance() {
     	((ViewGroup)mSlate.getParent()).removeView(mSlate);
         return mSlate;
+    }
+    
+    public static interface ViewFunc {
+        void apply(View v);
+    }
+    public static void descend(ViewGroup parent, ViewFunc func) {
+        for (int i=0; i<parent.getChildCount(); i++) {
+            final View v = parent.getChildAt(i);
+            if (v instanceof ViewGroup) {
+                descend((ViewGroup) v, func);
+            } else {
+                func.apply(v);
+            }
+        }
     }
 
     @Override
@@ -133,7 +139,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         }
 
         final ViewGroup colors = (ViewGroup) findViewById(R.id.colors);
-        colors.setOnTouchListener(new View.OnTouchListener() {
+        /*
+         * colors.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 //Log.d(TAG, "onTouch: " + event);
@@ -153,15 +160,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 }
                 return true;
             }
-        });
+        });*/
         
         setHUDVisibility(false, false);
 
-        clickColor(colors.getChildAt(0));
-
-        Resources res = getResources();
-        
-        ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
+        final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
             public void setPenMode(ToolButton tool, float min, float max) {
                 mSlate.setPenSize(min, max);
@@ -173,10 +176,34 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 }
             }
             @Override
+            public void setPenColor(ToolButton tool, int color) {
+                MarkersActivity.this.setPenColor(color);
+                mLastColor = mActiveColor;
+                mActiveColor = tool;
+                if (mLastColor != mActiveColor) {
+                    mLastColor.deactivate();
+                }
+            }
+            @Override
             public void restore(ToolButton tool) {
-                if (tool != mLastTool) mLastTool.click();
+                if (tool == mActiveTool && tool != mLastTool) mLastTool.click();
+                else if (tool == mActiveColor && tool != mLastColor) mLastColor.click();
             }
         };
+        
+        descend(colors, new ViewFunc() {
+            @Override
+            public void apply(View v) {
+                final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
+                if (swatch != null) {
+                    swatch.setCallback(toolCB);
+                    if (mActiveColor == null) {
+                        mLastColor = mActiveColor = swatch;
+                        swatch.click();
+                    }
+                }
+            }
+        });
         
         final ToolButton penThinButton = (ToolButton) findViewById(R.id.pen_thin);
         penThinButton.setCallback(toolCB);
@@ -453,38 +480,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         mDebugButton.setSelected(debugMode);
         Toast.makeText(this, "Debug mode " + ((mSlate.getDebugFlags() == 0) ? "off" : "on"),
             Toast.LENGTH_SHORT).show();
-    }
-    public void clickColor(View v) {
-        int color = 0xFF000000;
-        switch (v.getId()) {
-            case R.id.black:  color = 0xFF000000; break;
-            case R.id.white:  color = 0xFFFFFFFF; break;
-            case R.id.lgray:  color = 0xFFC0C0C0; break;
-            case R.id.gray:   color = 0xFF808080; break;
-            case R.id.dgray:  color = 0xFF404040; break;
-
-            case R.id.red:    color = 0xFFFF0000; break;
-            case R.id.green:  color = 0xFF00FF00; break;
-            case R.id.blue:   color = 0xFF0000FF; break;
-
-            case R.id.pink:   color = 0xFFFF00CC; break;
-            case R.id.orange: color = 0xFFFF8000; break;
-            case R.id.yellow: color = 0xFFFFFF00; break;
-            case R.id.purple: color = 0xFF6000A0; break;
-
-            case R.id.brown:  color = 0xFF804000; break;
-
-            case R.id.erase:  color = 0; break;
-        }
-        setPenColor(color);
-
-        ViewGroup list = (ViewGroup) findViewById(R.id.colors);
-        for (int i=0; i<list.getChildCount(); i++) {
-            Button c = (Button) list.getChildAt(i);
-            c.setText(c==v
-                ? "\u25A0"
-                : "");
-        }
     }
 
     public void clickUndo(View v) {

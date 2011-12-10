@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.AttributeSet;
@@ -19,12 +20,12 @@ public class ToolButton extends View {
     public static class ToolCallback {
         public void setZoomMode(ToolButton me) {}
         public void setPenMode(ToolButton me, float min, float max) {}
+        public void setPenColor(ToolButton me, int color) {}
         public void restore(ToolButton me) {}
     }
 
     private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 300; // ms
     
-    public float strokeWidthMin, strokeWidthMax;
     private ToolCallback mCallback;
     private long mDownTime;
     
@@ -37,6 +38,8 @@ public class ToolButton extends View {
     }
     
     public static class PenToolButton extends ToolButton {
+        public float strokeWidthMin, strokeWidthMax;
+
         public PenToolButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
 
@@ -84,6 +87,47 @@ public class ToolButton extends View {
                 canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, pt);
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
+        }
+    }
+    
+    public static class SwatchButton extends ToolButton {
+        public int color;
+        
+        public SwatchButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+
+            TypedArray a = context.obtainStyledAttributes(attrs, 
+                    R.styleable.SwatchButton, defStyle, 0);
+            
+            color = a.getColor(R.styleable.SwatchButton_color, 0xFFFFFF00);
+            
+            a.recycle();
+        }
+        
+        public SwatchButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setPenColor(this, color);
+        }
+        
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            final int p = this.getPaddingLeft();
+            if (isSelected() || isPressed()) {
+                canvas.clipRect(p, p, canvas.getWidth()-p, canvas.getHeight() - p);
+            }
+            if ((color & 0xFF000000) == 0) { // transparent
+                final Resources res = getResources();
+                res.getDrawable(R.drawable.transparent_tool).draw(canvas);
+            } else {
+                canvas.drawColor(color);
+            }
         }
     }
 

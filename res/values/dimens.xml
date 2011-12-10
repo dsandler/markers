@@ -6,5 +6,7 @@
     <dimen name="default_pen_size_max">24dp</dimen>
     <dimen name="action_bar_height">36dp</dimen>
     <dimen name="action_bar_logo_width">36dip</dimen>
-    <dimen name="action_button_padding_h">4dp</dimen><dimen name="action_button_padding_v">2dp</dimen>
+    <dimen name="action_button_padding_h">4dp</dimen>
+    <dimen name="action_button_padding_v">2dp</dimen>
+    <dimen name="tool_palette_gutter">6dp</dimen>
 </resources>

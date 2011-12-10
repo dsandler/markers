@@ -4,3 +4,5 @@ cp colors.xml layout-large/colors.xml and reformat per matias' recommendation
 	  - remove drag-rainbow-mode
 	  - possibly add quick size animation to emphasize selection
 	  - create proper selection indication
+
+add "precise stylus mode" -- don't filter stylus points or pressures

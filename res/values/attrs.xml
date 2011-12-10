@@ -5,7 +5,7 @@
         <attr name="strokeWidthMin" format="dimension" />
         <attr name="interpolator" format="reference" />
     </declare-styleable>
-    <declare-styleable name="ColorSwatchButton">
+    <declare-styleable name="SwatchButton">
         <attr name="color" format="color" />
     </declare-styleable>
 </resources>
