@@ -17,9 +17,9 @@
     		android:layout_height="@dimen/action_bar_height"
     		/>
     		
-    	<include layout="@layout/colors"
+    	<include layout="@layout/colors_horizontal"
     		android:layout_width="match_parent"
-    		android:layout_height="@dimen/button_bar_height"
+    		android:layout_height="70dp"
     		android:layout_alignParentBottom="true"
     		/>
     	

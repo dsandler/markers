@@ -9,6 +9,7 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.AttributeSet;
@@ -124,7 +125,9 @@ public class ToolButton extends View {
             }
             if ((color & 0xFF000000) == 0) { // transparent
                 final Resources res = getResources();
-                res.getDrawable(R.drawable.transparent_tool).draw(canvas);
+                final Drawable tile = res.getDrawable(R.drawable.transparent_tool);
+                tile.setBounds(canvas.getClipBounds());
+                tile.draw(canvas);
             } else {
                 canvas.drawColor(color);
             }

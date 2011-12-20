@@ -34,7 +34,7 @@
     			android:layout_marginBottom="@dimen/tool_palette_gutter"
     			/>
     			
-    		<include layout="@layout/colors"
+    		<include layout="@layout/colors_vertical"
     			android:layout_width="match_parent"
     			android:layout_height="match_parent"
     			android:layout_weight="2"
