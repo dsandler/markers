@@ -66,6 +66,7 @@ public class Slate extends View {
         private SmoothStroker mRenderer;
         
         private float mLastPressure = -1f;
+        private int mLastTool = 0;
         
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
@@ -96,22 +97,27 @@ public class Slate extends View {
             mRenderer.reset();
         }
 
-        public void addCoords(MotionEvent.PointerCoords pt, long time) {
-            mCoordBuffer.add(pt, time);
-            mLastPressure = pt.pressure;
-        }
+//        public void addCoords(MotionEvent.PointerCoords pt, long time) {
+//            mCoordBuffer.add(pt, time);
+//            mLastPressure = pt.pressure;
+//        }
         
         public void add(Spot s) {
             mCoordBuffer.add(s);
             mLastPressure = s.pressure;
+            mLastTool = s.tool;
         }
         
-        public float getRadius() {
-            return mRenderer.getRadius();
-        }
+//        public float getRadius() {
+//            return mRenderer.getRadius();
+//        }
 
         public float getLastPressure() {
             return mLastPressure;
+        }
+        
+        public int getLastTool() {
+            return mLastTool;
         }
     }
     
@@ -292,7 +298,7 @@ public class Slate extends View {
     private void drawStrokeDebugInfo(Canvas c) {
         final int ROW_HEIGHT = 24;
         final int ROW_MARGIN = 6;
-        final int COLUMN_WIDTH = 45;
+        final int COLUMN_WIDTH = 55;
         
         final float FIRM_PRESSURE_LOW = 0.85f;
         final float FIRM_PRESSURE_HIGH = 1.25f;
@@ -321,7 +327,9 @@ public class Slate extends View {
             else
                 mGraphPaint1.setColor(0xFFFF8000);
 
-            String s = (r < 0) ? "--" : String.format("%.4f", r);
+            String s = (r < 0) ? "--" : String.format("%s %.4f",
+                    ((st.getLastTool() == MotionEvent.TOOL_TYPE_STYLUS) ? "S" : "F"),
+                    r);
             
             graph.drawText(s, left, bottom - 2, mGraphPaint1);
             
@@ -467,10 +475,30 @@ public class Slate extends View {
     float dbgX = -1, dbgY = -1;
     RectF dbgRect = new RectF();
     
-    static boolean hasPointerCoords() {
+    final static boolean hasPointerCoords() {
     	return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR_MR1);
     }
+
+    final static boolean hasToolType() {
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH);
+    }
     
+    final static int getToolTypeCompat(MotionEvent me, int index) {
+        if (hasToolType()) {
+            return me.getToolType(index);
+        }
+        
+        // dirty hack for the HTC Flyer
+        if ("flyer".equals(Build.HARDWARE)) {
+            if (me.getSize(index) <= 0.1f) {
+                // with very high probability this is the stylus
+                return MotionEvent.TOOL_TYPE_STYLUS;
+            }
+        }
+        
+        return MotionEvent.TOOL_TYPE_FINGER;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
@@ -488,12 +516,14 @@ public class Slate extends View {
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
         		|| action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             int j = event.getActionIndex();
+            
         	mTmpSpot.update(
         	        event.getX(j),
         			event.getY(j),
         			event.getSize(j),
         			event.getPressure(j) + event.getSize(j),
-        			time
+        			time,
+        			getToolTypeCompat(event, j)
         			);
             mStrokes[event.getPointerId(j)].add(mTmpSpot);
         	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
@@ -512,7 +542,8 @@ public class Slate extends View {
                 			event.getHistoricalSize(j, i),
                 			event.getHistoricalPressure(j, i)
                                 + event.getHistoricalSize(j, i),
-                			event.getHistoricalEventTime(i)
+                			event.getHistoricalEventTime(i),
+                            getToolTypeCompat(event, j)
                 			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
@@ -531,8 +562,9 @@ public class Slate extends View {
             			event.getY(j),
             			event.getSize(j),
             			event.getPressure(j) + event.getSize(j),
-            			time
-            			);
+            			time,
+                        getToolTypeCompat(event, j)
+           			);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
                         mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
