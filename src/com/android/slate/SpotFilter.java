@@ -7,6 +7,8 @@ import android.view.MotionEvent;
 
 public class SpotFilter {
     public static boolean DEBUG = true;
+    
+    public static boolean PRECISE_STYLUS_INPUT = true;
 
     public static interface Plotter {
         public void plot(Spot s);
@@ -27,7 +29,7 @@ public class SpotFilter {
 
     public Spot filteredOutput(Spot out) {
         if (out == null) out = new Spot();
-
+        
         float wi = 1, w = 0;
         float x = 0, y = 0, pressure = 0, size = 0;
         long time = 0;
@@ -41,6 +43,11 @@ public class SpotFilter {
             w += wi;
 
             wi *= mDecay; // exponential backoff
+            
+            if (PRECISE_STYLUS_INPUT && pi.tool == MotionEvent.TOOL_TYPE_STYLUS) {
+                // just take the top one, no need to average
+                break;
+            }
         }
 
         out.x = x / w;
