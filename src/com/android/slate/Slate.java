@@ -41,6 +41,7 @@ public class Slate extends View {
     private static final int FIXED_DIMENSION = 0; // 1024;
 
     private static final float INVALIDATE_PADDING = 4.0f;
+    public static final boolean ASSUME_STYLUS_CALIBRATED = true;
 
     private float mPressureExponent = 2.0f;
 
@@ -76,10 +77,16 @@ public class Slate extends View {
         final Rect tmpDirtyRect = new Rect();
         @Override
         public void plot(Spot s) {
-            final float pressureNorm = mPressureCooker.getAdjustedPressure(s.pressure);
-            
+            final float pressureNorm;
+        
+            if (ASSUME_STYLUS_CALIBRATED && s.tool == MotionEvent.TOOL_TYPE_STYLUS) {
+                pressureNorm = s.pressure;
+            } else {
+                pressureNorm = mPressureCooker.getAdjustedPressure(s.pressure);
+            }
+
             final float radius = lerp(mRadiusMin, mRadiusMax,
-                   (float) Math.pow(pressureNorm, mPressureExponent));
+                    (float) Math.pow(pressureNorm, mPressureExponent));
             
             RectF dirtyF = mRenderer.strokeTo(mCurrentCanvas, s.x, s.y, radius);
             dirtyF.roundOut(tmpDirtyRect);

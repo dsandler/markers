@@ -55,6 +55,7 @@ public class SpotFilter {
         out.pressure = pressure / w;
         out.size = size / w;
         out.time = time;
+        out.tool = mSpots.get(0).tool;
         return out;
     }
 
