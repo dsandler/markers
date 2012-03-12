@@ -278,13 +278,41 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         //mSlate.recycle(); -- interferes with newly asynchronous saving code when sharing
     }
 
+    private String dumpBundle(Bundle b) {
+        if (b == null) return "null";
+        StringBuilder sb = new StringBuilder("Bundle{");
+        boolean first = true;
+        for (String key : b.keySet()) {
+            if (!first) sb.append(" ");
+            first = false;
+            sb.append(key+"=(");
+            sb.append(b.get(key));
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+    
     @Override
     protected void onStart() {
         super.onStart();
+        
         if (!mJustLoadedImage) {
             loadDrawing(WIP_FILENAME, true);
         } else {
             mJustLoadedImage = false;
+        }
+
+        Intent startIntent = getIntent();
+        Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
+        String a = startIntent.getAction();
+        if (a.equals(Intent.ACTION_EDIT)) {
+            // XXX: what happens to the old drawing? we should really move to auto-save
+            mSlate.clear();
+            loadImageFromIntent(startIntent);
+        } else if (a.equals(Intent.ACTION_SEND)) {
+            // XXX: what happens to the old drawing? we should really move to auto-save
+            mSlate.clear();
+            loadImageFromContentUri((Uri)startIntent.getParcelableExtra(Intent.EXTRA_STREAM));
         }
     }
 
@@ -489,32 +517,40 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void setPenColor(int color) {
         mSlate.setPenColor(color);
     }
+    
+    protected void loadImageFromIntent(Intent imageReturnedIntent) {
+        Uri contentUri = imageReturnedIntent.getData();
+        loadImageFromContentUri(contentUri);
+    }
+    
+    protected void loadImageFromContentUri(Uri contentUri) {
+        Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
+
+        loadDrawing(WIP_FILENAME, true);
+        mJustLoadedImage = true;
+
+        try {
+            Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
+            if (b != null) {
+                mSlate.paintBitmap(b);
+                Log.d(TAG, "successfully loaded bitmap: " + b);
+            } else {
+                Log.e(TAG, "couldn't get bitmap from " + contentUri);
+            }
+        } catch (java.io.FileNotFoundException ex) {
+            Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
+        } catch (java.io.IOException ex) {
+            Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
+        }
+    }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) { 
         super.onActivityResult(requestCode, resultCode, imageReturnedIntent); 
 
         switch (requestCode) { 
         case LOAD_IMAGE:
-            if (resultCode == RESULT_OK) {  
-                Uri contentUri = imageReturnedIntent.getData();
-                Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
-
-                loadDrawing(WIP_FILENAME, true);
-                mJustLoadedImage = true;
-
-                try {
-                    Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
-                    if (b != null) {
-                        mSlate.paintBitmap(b);
-                        Log.d(TAG, "successfully loaded bitmap: " + b);
-                    } else {
-                        Log.e(TAG, "couldn't get bitmap from " + contentUri);
-                    }
-                } catch (java.io.FileNotFoundException ex) {
-                    Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
-                } catch (java.io.IOException ex) {
-                    Log.e(TAG, "error loading image from " + contentUri + ": " + ex);
-                }
+            if (resultCode == RESULT_OK) {
+                loadImageFromIntent(imageReturnedIntent);
             }
         }
     }

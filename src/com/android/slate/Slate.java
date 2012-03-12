@@ -57,6 +57,11 @@ public class Slate extends View {
     private PressureCooker mPressureCooker;
     
     private boolean mEmpty;
+    
+    public interface SlateListener {
+        void strokeStarted();
+        void strokeEnded();
+    }
 
     private class MarkersPlotter implements SpotFilter.Plotter {
         // Plotter receives pointer coordinates and draws them.

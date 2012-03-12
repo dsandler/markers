@@ -70,8 +70,8 @@
             />  
           <ImageButton
             android:id="@+id/save" 
-            android:src="@drawable/newpage"
-            android:layout_width="wrap_content"
+            android:src="@drawable/uncledan"
+            android:layout_width="52dp"
             android:layout_height="match_parent" 
             android:contentDescription="save drawing"
             android:onClick="clickSave"
