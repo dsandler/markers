@@ -36,7 +36,8 @@ public class Slate extends View {
     private static final float WALK_STEP_PX = 3.0f;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
-    private static final float SMOOTHING_FILTER_DECAY = 0.7f;
+    private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
+    private static final float SMOOTHING_FILTER_PRESSURE_DECAY = 0.9f;
 
     private static final int FIXED_DIMENSION = 0; // 1024;
 
@@ -75,7 +76,7 @@ public class Slate extends View {
         private int mLastTool = 0;
         
         public MarkersPlotter() {
-            mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_DECAY, this);
+            mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
             mRenderer = new SmoothStroker();
         }
 

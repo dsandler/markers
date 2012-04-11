@@ -18,32 +18,38 @@ public class SpotFilter {
     int mBufSize;
     Plotter mPlotter;
     Spot tmpSpot = new Spot();
-    float mDecay;
+    private float mPosDecay;
+    private float mPressureDecay;
 
-    public SpotFilter(int size, float decay, Plotter plotter) {
+    public SpotFilter(int size, float posDecay, float pressureDecay, Plotter plotter) {
         mSpots = new LinkedList<Spot>();
         mBufSize = size;
         mPlotter = plotter;
-        mDecay = (decay >= 0 && decay <= 1) ? decay : 1f;
+        mPosDecay = (posDecay >= 0 && posDecay <= 1) ? posDecay : 1f;
+        mPressureDecay = (pressureDecay >= 0 && pressureDecay <= 1) ? pressureDecay : 1f;
     }
 
     public Spot filteredOutput(Spot out) {
         if (out == null) out = new Spot();
         
         float wi = 1, w = 0;
+        float wi_press = 1, w_press = 0;
         float x = 0, y = 0, pressure = 0, size = 0;
         long time = 0;
         for (Spot pi : mSpots) {
             x += pi.x * wi;
             y += pi.y * wi;
-            pressure += pi.pressure * wi;
-            size += pi.size * wi;
             time += pi.time * wi;
+            
+            pressure += pi.pressure * wi_press;
+            size += pi.size * wi_press;
 
             w += wi;
+            wi *= mPosDecay; // exponential backoff
 
-            wi *= mDecay; // exponential backoff
-            
+            w_press += wi_press;
+            wi_press *= mPressureDecay;
+
             if (PRECISE_STYLUS_INPUT && pi.tool == MotionEvent.TOOL_TYPE_STYLUS) {
                 // just take the top one, no need to average
                 break;
@@ -52,8 +58,8 @@ public class SpotFilter {
 
         out.x = x / w;
         out.y = y / w;
-        out.pressure = pressure / w;
-        out.size = size / w;
+        out.pressure = pressure / w_press;
+        out.size = size / w_press;
         out.time = time;
         out.tool = mSpots.get(0).tool;
         return out;
