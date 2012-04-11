@@ -175,6 +175,12 @@ public class Slate extends View {
             mLastR = -1;
         }
 
+        static float dist (float x1, float y1, float x2, float y2) {
+            x2-=x1;
+            y2-=y1;
+            return (float) Math.sqrt(x2*x2 + y2*y2);
+        }
+        
         final static RectF tmpDirtyRectF = new RectF();
         public RectF strokeTo(Canvas c, float x, float y, float r) {
             final RectF dirty = tmpDirtyRectF;
@@ -187,6 +193,26 @@ public class Slate extends View {
             } else {
                 // connect the dots, la-la-la
                 
+                mLastLen = dist(mLastX, mLastY, x, y);
+                float xi, yi, ri, frac;
+                float d = 0;
+                while (true) {
+                    if (d > mLastLen) {
+                        d = mLastLen;
+                    }
+                    frac = d / mLastLen;
+                    ri = lerp(mLastR, r, frac);
+                    xi = lerp(mLastX, x, frac);
+                    yi = lerp(mLastY, y, frac);
+                    c.drawCircle(xi, yi, ri, mPaint);
+                    dirty.union(xi - ri, yi - ri, xi + ri, yi + ri);
+
+                    if (d == mLastLen) break;
+                    d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
+                }
+                
+                /* 
+                // for curved paths
                 Path p = mWorkPath;
                 p.reset();
                 p.moveTo(mLastX, mLastY);
@@ -213,6 +239,7 @@ public class Slate extends View {
                     if (d == mLastLen) break;
                     d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
                 }
+                */
             }
 
             mLastX = x;
