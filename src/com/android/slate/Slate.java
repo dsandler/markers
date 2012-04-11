@@ -15,6 +15,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Region;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -25,6 +26,10 @@ public class Slate extends View {
 
     static final boolean DEBUG = true;
     static final String TAG = "Slate";
+    
+    public static final boolean HWLAYER = true;
+    public static final boolean SWLAYER = false;
+    public static final boolean FANCY_INVALIDATES = false;
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
@@ -59,6 +64,8 @@ public class Slate extends View {
     
     private boolean mEmpty;
     
+    private Region mDirtyRegion = new Region();
+    
     public interface SlateListener {
         void strokeStarted();
         void strokeEnded();
@@ -80,7 +87,7 @@ public class Slate extends View {
             mRenderer = new SmoothStroker();
         }
 
-        final Rect tmpDirtyRect = new Rect();
+//        final Rect tmpDirtyRect = new Rect();
         @Override
         public void plot(Spot s) {
             final float pressureNorm;
@@ -94,10 +101,11 @@ public class Slate extends View {
             final float radius = lerp(mRadiusMin, mRadiusMax,
                     (float) Math.pow(pressureNorm, mPressureExponent));
             
-            RectF dirtyF = mRenderer.strokeTo(mCurrentCanvas, s.x, s.y, radius);
-            dirtyF.roundOut(tmpDirtyRect);
-            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
-            invalidate(tmpDirtyRect);
+            final RectF dirtyF = mRenderer.strokeTo(mCurrentCanvas, s.x, s.y, radius);
+            dirty(dirtyF);
+//            dirtyF.roundOut(tmpDirtyRect);
+//            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
+//            invalidate(tmpDirtyRect);
         }
         
         public void setPenColor(int color) {
@@ -280,6 +288,14 @@ public class Slate extends View {
         mPressureCooker = new PressureCooker(getContext());
 
         setFocusable(true);
+        
+        if (HWLAYER) {
+            setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        } else if (SWLAYER) {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        } else {
+            setLayerType(View.LAYER_TYPE_NONE, null);
+        }
         
         if (true) {
             mDebugPaints[0] = new Paint();
@@ -500,8 +516,11 @@ public class Slate extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mCurrentBitmap != null) {
+            if (!mDirtyRegion.isEmpty()) {
+                canvas.clipRegion(mDirtyRegion);
+                mDirtyRegion.setEmpty();
+            }
             canvas.drawBitmap(mCurrentBitmap, 0, 0, null);
-            
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
@@ -643,5 +662,16 @@ public class Slate extends View {
         }
         super.invalidate(r);
     }
-}
 
+    final Rect tmpDirtyRect = new Rect();
+    private void dirty(RectF r) {
+        r.roundOut(tmpDirtyRect);
+        tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
+        if (FANCY_INVALIDATES) {
+            mDirtyRegion.union(tmpDirtyRect);
+            invalidate(); // enqueue invalidation
+        } else {
+            invalidate(tmpDirtyRect);
+        }
+    }
+}
