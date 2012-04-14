@@ -22,6 +22,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.google.android.markersbeta.R;
+
 public class Slate extends View {
 
     static final boolean DEBUG = true;
@@ -35,7 +37,7 @@ public class Slate extends View {
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 2;
     public static final int FLAG_DEBUG_EVERYTHING = ~0;
-
+    
     public static final int MAX_POINTERS = 10;
 
     private static final float WALK_STEP_PX = 3.0f;
@@ -48,6 +50,11 @@ public class Slate extends View {
 
     private static final float INVALIDATE_PADDING = 4.0f;
     public static final boolean ASSUME_STYLUS_CALIBRATED = true;
+    
+    public static final int SHAPE_CIRCLE = 0;
+    public static final int SHAPE_SQUARE = 1;
+    public static final int SHAPE_BITMAP_CIRCLE = 2;
+    public static final int SHAPE_BITMAP_AIRBRUSH = 3;
 
     private float mPressureExponent = 2.0f;
 
@@ -65,7 +72,7 @@ public class Slate extends View {
     private boolean mEmpty;
     
     private Region mDirtyRegion = new Region();
-    
+
     public interface SlateListener {
         void strokeStarted();
         void strokeEnded();
@@ -84,7 +91,7 @@ public class Slate extends View {
         
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
-            mRenderer = new SmoothStroker();
+            mRenderer = new SmoothStroker(getContext());
         }
 
 //        final Rect tmpDirtyRect = new Rect();
@@ -140,6 +147,10 @@ public class Slate extends View {
         public int getLastTool() {
             return mLastTool;
         }
+
+        public void setPenShape(int shape) {
+            mRenderer.setPenShape(shape);
+        }
     }
     
     private static class SmoothStroker {
@@ -149,14 +160,23 @@ public class Slate extends View {
         private float mTan[] = new float[2];
 
         private int mPenColor;
+        private int mShape = SHAPE_BITMAP_AIRBRUSH;
 
         private Path mWorkPath = new Path();
         private PathMeasure mWorkPathMeasure = new PathMeasure();
         
         private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         
-        public SmoothStroker() {
-            
+        private Bitmap mCircleBits;
+        private Bitmap mAirbrushBits;
+        
+        public SmoothStroker(Context context) {
+            mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
+            mAirbrushBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush);
+        }
+
+        public void setPenShape(int shape) {
+            mShape = shape;
         }
 
         public void setPenColor(int color) {
@@ -189,6 +209,28 @@ public class Slate extends View {
             return (float) Math.sqrt(x2*x2 + y2*y2);
         }
         
+        private RectF tmpRF = new RectF();
+        final void drawStrokePoint(Canvas c, float x, float y, float r, RectF dirty) {
+            switch (mShape) {
+            case SHAPE_SQUARE:
+                c.drawRect(x-r,y-r,x+r,y+r, mPaint);
+                break;
+            case SHAPE_BITMAP_CIRCLE:
+                tmpRF.set(x-r,y-r,x+r,y+r);
+                c.drawBitmap(mCircleBits, null, tmpRF, mPaint);
+                break;
+            case SHAPE_BITMAP_AIRBRUSH:
+                tmpRF.set(x-r,y-r,x+r,y+r);
+                c.drawBitmap(mAirbrushBits, null, tmpRF, mPaint);
+                break;
+            case SHAPE_CIRCLE:
+            default:
+                c.drawCircle(x, y, r, mPaint);
+                break;
+            }
+            dirty.union(x-r, y-r, x+r, y+r);
+        }
+        
         final static RectF tmpDirtyRectF = new RectF();
         public RectF strokeTo(Canvas c, float x, float y, float r) {
             final RectF dirty = tmpDirtyRectF;
@@ -196,8 +238,7 @@ public class Slate extends View {
             
             if (mLastR < 0) {
                 // always draw the first point
-                c.drawCircle(x, y, r, mPaint);
-                dirty.union(x-r, y-r, x+r, y+r);
+                drawStrokePoint(c,x,y,r,dirty);
             } else {
                 // connect the dots, la-la-la
                 
@@ -212,8 +253,7 @@ public class Slate extends View {
                     ri = lerp(mLastR, r, frac);
                     xi = lerp(mLastX, x, frac);
                     yi = lerp(mLastY, y, frac);
-                    c.drawCircle(xi, yi, ri, mPaint);
-                    dirty.union(xi - ri, yi - ri, xi + ri, yi + ri);
+                    drawStrokePoint(c,xi,yi,ri,dirty);
 
                     if (d == mLastLen) break;
                     d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
@@ -498,7 +538,13 @@ public class Slate extends View {
             plotter.setPenColor(color);
         }
     }
-
+    
+    public void setPenShape(int shape) {
+        for (MarkersPlotter plotter : mStrokes) {
+            plotter.setPenShape(shape);
+        }
+    }
+    
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
