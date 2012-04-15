@@ -247,15 +247,14 @@ public class Slate extends View {
                 float d = 0;
                 while (true) {
                     if (d > mLastLen) {
-                        d = mLastLen;
+                        break;
                     }
-                    frac = d / mLastLen;
+                    frac = d == 0 ? 0 : (d / mLastLen);
                     ri = lerp(mLastR, r, frac);
                     xi = lerp(mLastX, x, frac);
                     yi = lerp(mLastY, y, frac);
                     drawStrokePoint(c,xi,yi,ri,dirty);
 
-                    if (d == mLastLen) break;
                     d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
                 }
                 
