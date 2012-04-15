@@ -12,6 +12,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -40,7 +41,7 @@ public class Slate extends View {
     
     public static final int MAX_POINTERS = 10;
 
-    private static final float WALK_STEP_PX = 3.0f;
+    private static final float WALK_STEP_PX = 1.0f; // 3.0f;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
@@ -160,7 +161,7 @@ public class Slate extends View {
         private float mTan[] = new float[2];
 
         private int mPenColor;
-        private int mShape = SHAPE_BITMAP_AIRBRUSH;
+        private int mShape = SHAPE_CIRCLE; // SHAPE_BITMAP_AIRBRUSH;
 
         private Path mWorkPath = new Path();
         private PathMeasure mWorkPathMeasure = new PathMeasure();
@@ -169,6 +170,8 @@ public class Slate extends View {
         
         private Bitmap mCircleBits;
         private Bitmap mAirbrushBits;
+        
+        int mInkDensity = 0x20; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
         
         public SmoothStroker(Context context) {
             mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
@@ -187,7 +190,11 @@ public class Slate extends View {
                 mPaint.setColor(Color.BLACK);
             } else {
                 mPaint.setXfermode(null);
-                mPaint.setColor(color);
+                //color &= ;
+                //mPaint.setColor(color); mPaint.setAlpha(mInkDensity);
+                mPaint.setColor(mInkDensity << 24);
+                
+                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
             }
         }
 
