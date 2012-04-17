@@ -171,7 +171,7 @@ public class Slate extends View {
         private Bitmap mCircleBits;
         private Bitmap mAirbrushBits;
         
-        int mInkDensity = 0x20; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
+        int mInkDensity = 0x16; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
         
         public SmoothStroker(Context context) {
             mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
@@ -192,9 +192,10 @@ public class Slate extends View {
                 mPaint.setXfermode(null);
                 //color &= ;
                 //mPaint.setColor(color); mPaint.setAlpha(mInkDensity);
-                mPaint.setColor(mInkDensity << 24);
+                mPaint.setColor(Color.BLACK); // or collor? or color & (mInkDensity << 24)?
+                mPaint.setAlpha(mInkDensity);
                 
-                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
             }
         }
 
