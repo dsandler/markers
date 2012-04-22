@@ -407,8 +407,12 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     }
 
     public void saveDrawing(String filename, boolean temporary, boolean animate, boolean share, boolean clear) {
-        final Bitmap bits = mSlate.getBitmap();
-        if (bits == null) {
+        final Bitmap localBits;
+        final Bitmap currentBuffer = mSlate.getBitmap();
+        if (currentBuffer != null) {
+            // clone bitmap to keep it safe
+            localBits = currentBuffer.copy(currentBuffer.getConfig(), false);
+        } else {
             Log.e(TAG, "save: null bitmap");
             return;
         }
@@ -438,7 +442,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                     File file = new File(d, _filename);
                     Log.d(TAG, "save: saving " + file);
                     OutputStream os = new FileOutputStream(file);
-                    bits.compress(Bitmap.CompressFormat.PNG, 0, os);
+                    localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
+                    localBits.recycle();
                     os.close();
                     
                     fn = file.toString();
