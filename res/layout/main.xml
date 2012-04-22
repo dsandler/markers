@@ -24,7 +24,7 @@
     		/>
     	
         <include layout="@layout/tools"
-    		android:layout_width="85dp"
+    		android:layout_width="64dp"
     		android:layout_height="match_parent"
             android:layout_below="@+id/actionbar"
             android:layout_above="@+id/colors"

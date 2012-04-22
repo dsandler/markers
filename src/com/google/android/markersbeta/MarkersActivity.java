@@ -248,10 +248,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     public void onResume() {
         super.onResume();
+        
+        String orientation = getString(R.string.orientation);
+        
         setRequestedOrientation(
-        	(Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
-        		? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        		: ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                "landscape".equals(orientation)
+                    ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         mShaky.resume();
     }
 
