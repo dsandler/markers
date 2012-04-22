@@ -35,8 +35,6 @@
           <ImageButton
             android:id="@+id/debug"
             style="@style/ActionBar.Icon"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
             android:src="@drawable/doodlebug" 
             android:contentDescription="debug mode"
             android:onClick="clickDebug"
@@ -44,8 +42,6 @@
           <ImageButton
             android:id="@+id/undo"
             android:src="@drawable/undo"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" 
             android:contentDescription="undo"
             android:onClick="clickUndo"
             style="@style/ActionBar.Icon"
@@ -53,8 +49,6 @@
           <ImageButton
             android:id="@+id/load"
             android:src="@drawable/load"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" 
             android:contentDescription="load image"
             android:onClick="clickLoad"
             style="@style/ActionBar.Icon"
@@ -62,8 +56,6 @@
           <ImageButton
             android:id="@+id/clear" 
             android:src="@drawable/scribble"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" 
             android:contentDescription="erase drawing"
             android:onClick="clickClear"
             style="@style/ActionBar.Icon"
@@ -71,8 +63,6 @@
           <ImageButton
             android:id="@+id/save" 
             android:src="@drawable/uncledan"
-            android:layout_width="52dp"
-            android:layout_height="match_parent" 
             android:contentDescription="save drawing"
             android:onClick="clickSave"
             style="@style/ActionBar.Icon"
@@ -80,8 +70,6 @@
           <ImageButton
             android:id="@+id/share" 
             android:src="@drawable/share"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" 
             android:contentDescription="share drawing"
             android:onClick="clickShare"
             style="@style/ActionBar.Icon"

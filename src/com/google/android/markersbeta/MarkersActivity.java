@@ -130,6 +130,13 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         mSlate = (Slate) getLastNonConfigurationInstance();
         if (mSlate == null) {
         	mSlate = new Slate(this);
+
+        	// Load the old buffer if necessary
+            if (!mJustLoadedImage) {
+                loadDrawing(WIP_FILENAME, true);
+            } else {
+                mJustLoadedImage = false;
+            }
         }
         final ViewGroup root = ((ViewGroup)findViewById(R.id.root));
         root.addView(mSlate, 0);
@@ -298,13 +305,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     protected void onStart() {
         super.onStart();
+        //Log.d(TAG, "onStart");
         
-        if (!mJustLoadedImage) {
-            loadDrawing(WIP_FILENAME, true);
-        } else {
-            mJustLoadedImage = false;
-        }
-
         Intent startIntent = getIntent();
         Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
         String a = startIntent.getAction();
@@ -385,7 +387,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
         final String filePath = new File(d, filename).toString();
-        //Log.d(TAG, "loadDrawing: " + filePath);
+        Log.d(TAG, "loadDrawing: " + filePath);
         
         if (d.exists()) {
             BitmapFactory.Options opts = new BitmapFactory.Options();
@@ -394,7 +396,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             opts.inScaled = false;
             Bitmap bits = BitmapFactory.decodeFile(filePath, opts);
             if (bits != null) {
-                mSlate.setBitmap(bits);
+                //mSlate.setBitmap(bits); // messes with the bounds
+                mSlate.paintBitmap(bits);
                 return true;
             }
         }

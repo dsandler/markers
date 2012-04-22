@@ -68,6 +68,8 @@ public class Slate extends View {
     private Canvas mPreviousCanvas, mCurrentCanvas;
     private final Paint mDebugPaints[] = new Paint[10];
     
+    private Bitmap mPendingPaintBitmap;
+    
     private PressureCooker mPressureCooker;
     
     private boolean mEmpty;
@@ -326,6 +328,9 @@ public class Slate extends View {
     }
     
     private void init() {
+//        setWillNotCacheDrawing(true);
+//        setDrawingCacheEnabled(false);
+        
         mEmpty = true;
         
         for (int i=0; i<mStrokes.length; i++) {
@@ -381,9 +386,14 @@ public class Slate extends View {
     }
 
     public void clear() {
-        commitStroke();
-        mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
-        invalidate();
+        if (mCurrentBitmap != null) {
+            commitStroke();
+            mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
+            invalidate();
+        } else if (mPendingPaintBitmap != null) {
+            mPendingPaintBitmap.recycle();
+            mPendingPaintBitmap = null;
+        }
         mEmpty = true;
     }
 
@@ -475,6 +485,9 @@ public class Slate extends View {
         swapCanvas.save();
         swapCanvas.setMatrix(null);
         swapCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        if (DEBUG) { 
+            Log.v(TAG, "swapCanvas: drawing bitmap into new canvas");
+        }
         swapCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
         swapCanvas.restore();
 
@@ -490,6 +503,11 @@ public class Slate extends View {
     }
 
     public void paintBitmap(Bitmap b) {
+        if (mCurrentBitmap == null) {
+            mPendingPaintBitmap = b;
+            return;
+        }
+
         commitStroke();
 
         Matrix m = new Matrix();
@@ -497,6 +515,9 @@ public class Slate extends View {
         RectF d = new RectF(0, 0, mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight());
         m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
         
+        if (DEBUG) { 
+            Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
+        }
         mCurrentCanvas.drawBitmap(b, m, sBitmapPaint);
         invalidate();
 
@@ -519,6 +540,9 @@ public class Slate extends View {
         Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
+        if (DEBUG) { 
+            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
+        }
         newCanvas.drawBitmap(b, 0, 0, null);
         
         if (mCurrentBitmap != null && !mCurrentBitmap.isRecycled()) mCurrentBitmap.recycle();
@@ -556,7 +580,7 @@ public class Slate extends View {
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
         if (mCurrentBitmap != null) return;
-
+        
         mCurrentBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         mCurrentCanvas = new Canvas();
         mCurrentCanvas.setBitmap(mCurrentBitmap);
@@ -564,6 +588,12 @@ public class Slate extends View {
         mPreviousBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         mPreviousCanvas = new Canvas();
         mPreviousCanvas.setBitmap(mPreviousBitmap);
+
+        final Bitmap b = mPendingPaintBitmap; 
+        if (b != null) {
+            mPendingPaintBitmap = null;
+            paintBitmap(b);
+        }
     }
 
     @Override
