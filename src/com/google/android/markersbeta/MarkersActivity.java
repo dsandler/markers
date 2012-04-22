@@ -356,11 +356,16 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         final View logo = findViewById(R.id.logo);
         if (!show) {
             if (hasAnimations() && animate) {
-                ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f).start();
-                Animator a = ObjectAnimator.ofFloat(hud, "alpha", 1f, 0f);
+                hud.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                AnimatorSet a = new AnimatorSet();
+                a.playTogether(
+                        ObjectAnimator.ofFloat(hud, "alpha", 1f, 0f),
+                        ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f)
+                );
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
                         hud.setVisibility(View.GONE);
+                        hud.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
                 a.start();
@@ -370,8 +375,18 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         } else {
             hud.setVisibility(View.VISIBLE);
             if (hasAnimations() && animate) {
-                ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f).start();
-                ObjectAnimator.ofFloat(hud, "alpha", 0f, 1f).start();
+                hud.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                AnimatorSet a = new AnimatorSet();
+                a.playTogether(
+                        ObjectAnimator.ofFloat(hud, "alpha", 0f, 1f),
+                        ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f)
+                );
+                a.addListener(new AnimatorListenerAdapter() {
+                    public void onAnimationEnd(Animator a) {
+                        hud.setLayerType(View.LAYER_TYPE_NONE, null);
+                    }
+                });
+                a.start();
             }
         }
     }
