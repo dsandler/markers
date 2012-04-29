@@ -71,6 +71,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     protected ToolButton mLastColor, mActiveColor;
 
+    private View mColorsView;
+    private View mActionBarView;
+    private View mToolsView;
+    private View mLogoView;
+
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
             super(c, as);
@@ -145,7 +150,11 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             onRestoreInstanceState(icicle);
         }
 
-        final ViewGroup colors = (ViewGroup) findViewById(R.id.colors);
+        mActionBarView = findViewById(R.id.actionbar);
+        mToolsView = findViewById(R.id.tools);
+        mColorsView = findViewById(R.id.colors);
+        mLogoView = findViewById(R.id.logo);
+
         /*
          * colors.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -198,7 +207,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             }
         };
         
-        descend(colors, new ViewFunc() {
+        descend((ViewGroup) mColorsView, new ViewFunc() {
             @Override
             public void apply(View v) {
                 final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
@@ -278,7 +287,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void onAttachedToWindow() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        
     }
 
     @Override
@@ -347,43 +355,61 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     }
 
     public boolean getHUDVisibility() {
-        final View bar = findViewById(R.id.hud);
-        return bar.getVisibility() == View.VISIBLE;
+        return mActionBarView.getVisibility() == View.VISIBLE;
     }
 
     public void setHUDVisibility(boolean show, boolean animate) {
-        final View hud = findViewById(R.id.hud);
-        final View logo = findViewById(R.id.logo);
         if (!show) {
             if (hasAnimations() && animate) {
-                hud.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
                 AnimatorSet a = new AnimatorSet();
                 a.playTogether(
-                        ObjectAnimator.ofFloat(hud, "alpha", 1f, 0f),
-                        ObjectAnimator.ofFloat(logo, "alpha", 1f, 0.5f)
+                        ObjectAnimator.ofFloat(mColorsView, "alpha", 1f, 0f),
+                        ObjectAnimator.ofFloat(mToolsView, "alpha", 1f, 0f),
+                        ObjectAnimator.ofFloat(mActionBarView, "alpha", 1f, 0f),
+                        ObjectAnimator.ofFloat(mLogoView, "alpha", 1f, 0.5f)
                 );
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
-                        hud.setVisibility(View.GONE);
-                        hud.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mColorsView.setVisibility(View.GONE);
+                        mToolsView.setVisibility(View.GONE);
+                        mActionBarView.setVisibility(View.GONE);
+                        
+                        mToolsView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mColorsView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mActionBarView.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
                 a.start();
             } else {
-                hud.setVisibility(View.GONE);
+                mColorsView.setVisibility(View.GONE);
+                mToolsView.setVisibility(View.GONE);
+                mActionBarView.setVisibility(View.GONE);
             }
         } else {
-            hud.setVisibility(View.VISIBLE);
+            mColorsView.setVisibility(View.VISIBLE);
+            mToolsView.setVisibility(View.VISIBLE);
+            mActionBarView.setVisibility(View.VISIBLE);
             if (hasAnimations() && animate) {
-                hud.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
                 AnimatorSet a = new AnimatorSet();
                 a.playTogether(
-                        ObjectAnimator.ofFloat(hud, "alpha", 0f, 1f),
-                        ObjectAnimator.ofFloat(logo, "alpha", 0.5f, 1f)
+                        ObjectAnimator.ofFloat(mColorsView, "alpha", 0f, 1f),
+                        ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f),
+                        ObjectAnimator.ofFloat(mActionBarView, "alpha", 0f, 1f),
+                        ObjectAnimator.ofFloat(mLogoView, "alpha", 0.5f, 1f)
                 );
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
-                        hud.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mToolsView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mColorsView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        mActionBarView.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
                 a.start();

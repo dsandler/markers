@@ -7,30 +7,27 @@
     android:id="@+id/root"
     >
     
-    <FrameLayout
-        android:id="@+id/hud"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        >
-    	<include layout="@layout/actionbar"
-    		android:layout_width="match_parent"
-    		android:layout_height="@dimen/action_bar_height"
-    		/>
-    		
-    	<include layout="@layout/colors_horizontal"
-    		android:layout_width="match_parent"
-    		android:layout_height="70dp"
-    		android:layout_gravity="bottom"
-    		/>
-    	
-        <include layout="@layout/tools"
-    		android:layout_width="64dp"
-    		android:layout_height="match_parent"
-    		android:layout_marginTop="@dimen/action_bar_height"
-    		android:layout_marginBottom="70dp"
-            android:layout_gravity="left"
-    		/>
-    </FrameLayout>
+   	<include layout="@layout/actionbar"
+   	    android:id="@+id/actionbar"
+   		android:layout_width="match_parent"
+   		android:layout_height="@dimen/action_bar_height"
+   		/>
+   		
+   	<include layout="@layout/colors_horizontal"
+   	    android:id="@+id/colors"
+   		android:layout_width="match_parent"
+   		android:layout_height="70dp"
+   		android:layout_gravity="bottom"
+   		/>
+   	
+    <include layout="@layout/tools"
+   	    android:id="@+id/tools"
+   		android:layout_width="64dp"
+   		android:layout_height="match_parent"
+   		android:layout_marginTop="@dimen/action_bar_height"
+   		android:layout_marginBottom="70dp"
+        android:layout_gravity="left"
+   		/>
 
     <ImageView
         android:id="@+id/logo"
