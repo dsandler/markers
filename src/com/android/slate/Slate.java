@@ -52,6 +52,10 @@ public class Slate extends View {
     private static final float INVALIDATE_PADDING = 4.0f;
     public static final boolean ASSUME_STYLUS_CALIBRATED = true;
     
+    public static final int TYPE_WHITEBOARD = 0;
+    public static final int TYPE_FELTTIP = 1;
+    public static final int TYPE_AIRBRUSH = 2;
+    
     public static final int SHAPE_CIRCLE = 0;
     public static final int SHAPE_SQUARE = 1;
     public static final int SHAPE_BITMAP_CIRCLE = 2;
@@ -151,8 +155,8 @@ public class Slate extends View {
             return mLastTool;
         }
 
-        public void setPenShape(int shape) {
-            mRenderer.setPenShape(shape);
+        public void setPenType(int shape) {
+            mRenderer.setPenType(shape);
         }
     }
     
@@ -163,6 +167,8 @@ public class Slate extends View {
         private float mTan[] = new float[2];
 
         private int mPenColor;
+        private int mPenType;
+
         private int mShape = SHAPE_CIRCLE; // SHAPE_BITMAP_AIRBRUSH;
 
         private Path mWorkPath = new Path();
@@ -173,15 +179,11 @@ public class Slate extends View {
         private Bitmap mCircleBits;
         private Bitmap mAirbrushBits;
         
-        int mInkDensity = 0x16; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
+        int mInkDensity = 0xff; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
         
         public SmoothStroker(Context context) {
             mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
-            mAirbrushBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush);
-        }
-
-        public void setPenShape(int shape) {
-            mShape = shape;
+            mAirbrushBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_light);
         }
 
         public void setPenColor(int color) {
@@ -192,17 +194,41 @@ public class Slate extends View {
                 mPaint.setColor(Color.BLACK);
             } else {
                 mPaint.setXfermode(null);
-                //color &= ;
-                //mPaint.setColor(color); mPaint.setAlpha(mInkDensity);
+                
+                //mPaint.setColor(color); 
                 mPaint.setColor(Color.BLACK); // or collor? or color & (mInkDensity << 24)?
                 mPaint.setAlpha(mInkDensity);
                 
-                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+//                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP));
             }
         }
 
         public int getPenColor() {
             return mPenColor;
+        }
+        
+        public void setPenType(int type) {
+            mPenType = type;
+            switch (type) {
+            case TYPE_WHITEBOARD:
+                mShape = SHAPE_CIRCLE;
+                mInkDensity = 0xff;
+                break;
+            case TYPE_FELTTIP:
+                mShape = SHAPE_CIRCLE;
+                mInkDensity = 0x15;
+                break;
+            case TYPE_AIRBRUSH:
+                mShape = SHAPE_BITMAP_AIRBRUSH;
+                mInkDensity = 0xff;
+                break;
+            }
+            setPenColor(mPenColor);
+        }
+        
+        public int getPenType() {
+            return mPenType;
         }
 
         public void setDebugMode(boolean debug) {
@@ -570,9 +596,9 @@ public class Slate extends View {
         }
     }
     
-    public void setPenShape(int shape) {
+    public void setPenType(int shape) {
         for (MarkersPlotter plotter : mStrokes) {
-            plotter.setPenShape(shape);
+            plotter.setPenType(shape);
         }
     }
     

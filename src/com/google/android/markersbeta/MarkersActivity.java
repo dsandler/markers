@@ -71,6 +71,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     protected ToolButton mLastColor, mActiveColor;
 
+    protected ToolButton mLastPenType, mActivePenType;
+
     private View mColorsView;
     private View mActionBarView;
     private View mToolsView;
@@ -203,6 +205,15 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 }
             }
             @Override
+            public void setPenType(ToolButton tool, int penType) {
+                MarkersActivity.this.setPenType(penType);
+                mLastPenType = mActivePenType;
+                mActivePenType = tool;
+                if (mLastPenType != mActivePenType) {
+                    mLastPenType.deactivate();
+                }
+            }
+            @Override
             public void restore(ToolButton tool) {
                 if (tool == mActiveTool && tool != mLastTool) mLastTool.click();
                 else if (tool == mActiveColor && tool != mLastColor) mLastColor.click();
@@ -241,7 +252,23 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         
         mLastTool = mActiveTool = (penThickButton != null) ? penThickButton : penThinButton;
         mActiveTool.click();
+
+        final ToolButton typeWhiteboardButton = (ToolButton) findViewById(R.id.whiteboard_marker);
+        typeWhiteboardButton.setCallback(toolCB);
+
+        final ToolButton typeFeltTipButton = (ToolButton) findViewById(R.id.felttip_marker);
+        if (typeFeltTipButton != null) {
+            typeFeltTipButton.setCallback(toolCB);
+        }
         
+        final ToolButton typeAirbrushButton = (ToolButton) findViewById(R.id.airbrush_marker);
+        if (typeAirbrushButton != null) {
+            typeAirbrushButton.setCallback(toolCB);
+        }
+        
+        mLastPenType = mActivePenType = typeWhiteboardButton;
+        mActivePenType.click();
+
         mDebugButton = findViewById(R.id.debug);
         
         // clickDebug(null); // auto-debug mode for partners
@@ -600,6 +627,10 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
     public void setPenColor(int color) {
         mSlate.setPenColor(color);
+    }
+    
+    public void setPenType(int type) {
+        mSlate.setPenType(type);
     }
     
     protected void loadImageFromIntent(Intent imageReturnedIntent) {

@@ -2,12 +2,18 @@ package com.google.android.markersbeta;
 
 import java.lang.ref.WeakReference;
 
+import com.android.slate.Slate;
+
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -23,6 +29,7 @@ public class ToolButton extends View {
         public void setPenMode(ToolButton me, float min, float max) {}
         public void setPenColor(ToolButton me, int color) {}
         public void restore(ToolButton me) {}
+        public void setPenType(ToolButton penTypeButton, int penType) {}
     }
 
     private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 300; // ms
@@ -73,14 +80,19 @@ public class ToolButton extends View {
             ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
             pt.setColor(fg.getColorForState(getDrawableState(), fg.getDefaultColor()));
             
-            final float r1 = strokeWidthMin * 0.5f;
-            final float r2 = strokeWidthMax * 0.5f;
+            float r1 = strokeWidthMin * 0.5f;
+            float r2 = strokeWidthMax * 0.5f;
+            
             final boolean vertical = getHeight() > getWidth();
             final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
             final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
             final float center = (vertical ? getWidth() : getHeight()) / 2;
             final float iter = 1f / (vertical ? getHeight() : getWidth());
             final float amplitude = (center-r2)*0.5f;
+
+            if (r1 > center) r1 = center;
+            if (r2 > center) r2 = center;
+
             for (float f = 0f; f < 1.0f; f += iter) {
                 final float y = com.android.slate.Slate.lerp(start, end, f);
                 final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
@@ -90,7 +102,67 @@ public class ToolButton extends View {
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
         }
     }
-    
+
+    public static class PenTypeButton extends ToolButton {
+        public int penType;
+        private Bitmap icon;
+
+        public PenTypeButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+
+            TypedArray a = context.obtainStyledAttributes(attrs, 
+                    R.styleable.PenTypeButton, defStyle, 0);
+            
+            penType = a.getInt(R.styleable.PenTypeButton_penType, 0);
+            if (penType == Slate.TYPE_AIRBRUSH) {
+                icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_dark);
+            }
+            
+            a.recycle();
+        }
+        
+        public PenTypeButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setPenType(this, penType);
+        }
+
+        private RectF tmpRF = new RectF();
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float x = 0.5f*getWidth();
+            float y = 0.5f*getHeight();
+            float r = Math.min(getWidth()-getPaddingLeft()-getPaddingRight(),
+                             getHeight()-getPaddingTop()-getPaddingBottom()) * 0.5f;
+
+
+            final Resources res = getResources();
+            final Paint pt = new Paint(Paint.ANTI_ALIAS_FLAG);
+            ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
+            int color = fg.getColorForState(getDrawableState(), fg.getDefaultColor());
+            pt.setColor(color);
+            pt.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+            tmpRF.set(x-r,y-r,x+r,y+r);
+
+            if (penType == Slate.TYPE_WHITEBOARD) {
+                pt.setAlpha(0xFF);
+                canvas.drawCircle(x, y, r, pt);
+            } else if (penType == Slate.TYPE_FELTTIP) {
+                pt.setAlpha(0x80);
+                canvas.drawCircle(x, y, r, pt);
+            } else if (penType == Slate.TYPE_AIRBRUSH) {
+                pt.setAlpha(0xFF);
+                canvas.drawBitmap(icon, null, tmpRF, pt);
+            }
+        }
+    }
+
     public static class SwatchButton extends ToolButton {
         public int color;
         
@@ -115,14 +187,13 @@ public class ToolButton extends View {
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setPenColor(this, color);
         }
+        final int HIGHLIGHT_STROKE_COLOR = 0xFFFFFFFF;
+        final int HIGHLIGHT_STROKE_COLOR_ALT = 0xFFC0C0C0;
         
         @Override
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            final int p = this.getPaddingLeft();
-            if (isSelected() || isPressed()) {
-                canvas.clipRect(p, p, canvas.getWidth()-p, canvas.getHeight() - p);
-            }
+            int p = this.getPaddingLeft();
             if ((color & 0xFF000000) == 0) { // transparent
                 final Resources res = getResources();
                 final Drawable tile = res.getDrawable(R.drawable.transparent_tool);
@@ -130,6 +201,16 @@ public class ToolButton extends View {
                 tile.draw(canvas);
             } else {
                 canvas.drawColor(color);
+            }
+            if (isSelected() || isPressed()) {
+                Paint paint = new Paint();
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(p);
+                paint.setColor(color == HIGHLIGHT_STROKE_COLOR 
+                        ? HIGHLIGHT_STROKE_COLOR_ALT 
+                        : HIGHLIGHT_STROKE_COLOR);
+                p /= 2;
+                canvas.drawRect(p, p, getWidth()-p, getHeight()-p, paint);
             }
         }
     }

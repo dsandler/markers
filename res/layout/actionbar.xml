@@ -62,7 +62,7 @@
             />  
           <ImageButton
             android:id="@+id/save" 
-            android:src="@drawable/uncledan"
+            android:src="@drawable/newpage"
             android:contentDescription="save drawing"
             android:onClick="clickSave"
             style="@style/ActionBar.Icon"

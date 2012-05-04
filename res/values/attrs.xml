@@ -8,4 +8,11 @@
     <declare-styleable name="SwatchButton">
         <attr name="color" format="color" />
     </declare-styleable>
+    <declare-styleable name="PenTypeButton">
+        <attr name="penType">
+	        <enum name="whiteboard" value="0" />
+	        <enum name="feltTip" value="1" />
+	        <enum name="airbrush" value="2" />
+        </attr>
+    </declare-styleable>
 </resources>
