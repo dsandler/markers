@@ -17,6 +17,7 @@
 	<LinearLayout
 		android:layout_width="@dimen/action_bar_logo_width"
 		android:layout_height="match_parent"
+		android:id="@+id/hud"
 	    android:layout_marginTop="@dimen/action_bar_height"
 		android:gravity="left"
 		android:orientation="vertical"

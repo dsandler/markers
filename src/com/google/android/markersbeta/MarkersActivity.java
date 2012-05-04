@@ -75,6 +75,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     private View mActionBarView;
     private View mToolsView;
     private View mLogoView;
+    private View mComboHudView;
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -151,6 +152,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         }
 
         mActionBarView = findViewById(R.id.actionbar);
+        mComboHudView = findViewById(R.id.hud);
         mToolsView = findViewById(R.id.tools);
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
@@ -361,21 +363,32 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     public void setHUDVisibility(boolean show, boolean animate) {
         if (!show) {
             if (hasAnimations() && animate) {
-                mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                if (mComboHudView != null) {
+                    mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                } else {
+                    mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                    mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                }
                 mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
                 AnimatorSet a = new AnimatorSet();
-                a.playTogether(
-                        ObjectAnimator.ofFloat(mColorsView, "alpha", 1f, 0f),
-                        ObjectAnimator.ofFloat(mToolsView, "alpha", 1f, 0f),
-                        ObjectAnimator.ofFloat(mActionBarView, "alpha", 1f, 0f),
-                        ObjectAnimator.ofFloat(mLogoView, "alpha", 1f, 0.5f)
-                );
+                AnimatorSet.Builder b = 
+                        a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 1f, 0.5f))
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 1f, 0f));
+                if (mComboHudView != null) {
+                    b.with(ObjectAnimator.ofFloat(mComboHudView, "alpha", 1f, 0f));
+                } else {
+                    b.with(ObjectAnimator.ofFloat(mColorsView, "alpha", 1f, 0f))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 1f, 0f));
+                }
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
-                        mColorsView.setVisibility(View.GONE);
-                        mToolsView.setVisibility(View.GONE);
+                        if (mComboHudView != null) {
+                            mComboHudView.setVisibility(View.GONE);
+                        } else {
+                            mColorsView.setVisibility(View.GONE);
+                            mToolsView.setVisibility(View.GONE);
+                        }
                         mActionBarView.setVisibility(View.GONE);
                         
                         mToolsView.setLayerType(View.LAYER_TYPE_NONE, null);
@@ -385,30 +398,49 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 });
                 a.start();
             } else {
-                mColorsView.setVisibility(View.GONE);
-                mToolsView.setVisibility(View.GONE);
+                if (mComboHudView != null) {
+                    mComboHudView.setVisibility(View.GONE);
+                } else {
+                    mColorsView.setVisibility(View.GONE);
+                    mToolsView.setVisibility(View.GONE);
+                }
                 mActionBarView.setVisibility(View.GONE);
             }
         } else {
-            mColorsView.setVisibility(View.VISIBLE);
-            mToolsView.setVisibility(View.VISIBLE);
+            if (mComboHudView != null) {
+                mComboHudView.setVisibility(View.VISIBLE);
+            } else {
+                mColorsView.setVisibility(View.VISIBLE);
+                mToolsView.setVisibility(View.VISIBLE);
+            }
             mActionBarView.setVisibility(View.VISIBLE);
             if (hasAnimations() && animate) {
-                mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                if (mComboHudView != null) {
+                    mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                } else {
+                    mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                    mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                }
                 mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
                 AnimatorSet a = new AnimatorSet();
-                a.playTogether(
-                        ObjectAnimator.ofFloat(mColorsView, "alpha", 0f, 1f),
-                        ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f),
-                        ObjectAnimator.ofFloat(mActionBarView, "alpha", 0f, 1f),
-                        ObjectAnimator.ofFloat(mLogoView, "alpha", 0.5f, 1f)
-                );
+                AnimatorSet.Builder b = 
+                        a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 0.5f, 1f))
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 0f, 1f));
+                if (mComboHudView != null) {
+                    b.with(ObjectAnimator.ofFloat(mComboHudView, "alpha", 0f, 1f));
+                } else {
+                    b.with(ObjectAnimator.ofFloat(mColorsView, "alpha", 0f, 1f))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f));
+                }
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
-                        mToolsView.setLayerType(View.LAYER_TYPE_NONE, null);
-                        mColorsView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        if (mComboHudView != null) {
+                            mComboHudView.setVisibility(View.VISIBLE);
+                        } else {
+                            mColorsView.setVisibility(View.VISIBLE);
+                            mToolsView.setVisibility(View.VISIBLE);
+                        }
                         mActionBarView.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
