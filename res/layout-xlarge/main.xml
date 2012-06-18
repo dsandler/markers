@@ -41,7 +41,7 @@
 
     <ImageView
         android:id="@+id/logo"
-        android:src="@drawable/icon"
+        android:src="@drawable/markers"
         android:layout_width="@dimen/action_bar_logo_width"
         android:layout_height="@dimen/action_bar_height"
         android:padding="2dp"
