@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
-    	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.markersbeta"
+    	xmlns:markers="http://schemas.android.com/apk/res/com.example.markers"
         style="@style/ActionBar.Bar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -18,7 +18,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF000000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -27,7 +27,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFFFFFF"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -36,7 +36,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#00000000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -52,7 +52,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF404040"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -61,7 +61,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF808080"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -70,7 +70,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFC0C0C0"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -88,7 +88,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF800000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -97,7 +97,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFF0000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -106,7 +106,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFF8080"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -122,7 +122,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF008000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -131,7 +131,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF00FF00"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -140,7 +140,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF80FF80"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -156,7 +156,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF000080"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -165,7 +165,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF0000FF"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -174,7 +174,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF8080FF"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -192,7 +192,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF808000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -201,7 +201,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFFFF00"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -210,7 +210,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFFFF80"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -226,7 +226,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF804000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -235,7 +235,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFF8000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -244,7 +244,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFFCC80"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -260,7 +260,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF800040"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -269,7 +269,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFF0080"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -278,7 +278,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFFF80CC"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -294,7 +294,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF400080"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -303,7 +303,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF8000FF"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -312,7 +312,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFCC80FF"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -328,7 +328,7 @@
                 >
             
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF402000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -337,7 +337,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FF804000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -346,7 +346,7 @@
                 />
                
             <view
-                class="com.google.android.markersbeta.ToolButton$SwatchButton"
+                class="com.example.markers.ToolButton$SwatchButton"
                 markers:color="#FFCCAA80"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
