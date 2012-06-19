@@ -1,22 +1,23 @@
 package com.google.android.markersbeta;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -31,19 +32,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.AnimationSet;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
-
-import android.media.MediaScannerConnection;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 
 import com.android.slate.Slate;
 
@@ -60,8 +50,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     private static final String PREFS_NAME = "MarkersPrefs";
 
     Slate mSlate;
-
-    MrShaky mShaky;
 
     boolean mJustLoadedImage = false;
 
@@ -132,8 +120,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
         //Log.d(TAG, "window format: " + getWindow().getAttributes().format);
         
-        mShaky = new MrShaky(this, this);
-        
         setContentView(R.layout.main);
         mSlate = (Slate) getLastNonConfigurationInstance();
         if (mSlate == null) {
@@ -158,29 +144,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         mToolsView = findViewById(R.id.tools);
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
-
-        /*
-         * colors.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                //Log.d(TAG, "onTouch: " + event);
-                if (event.getAction() == MotionEvent.ACTION_DOWN
-                        || event.getAction() == MotionEvent.ACTION_MOVE) {
-                   final boolean horizontal = (colors.getWidth() > colors.getHeight());
-
-                   int index = (int) 
-                        ((horizontal
-                                ? (event.getX() / colors.getWidth())
-                                : (event.getY() / colors.getHeight()))
-                            * colors.getChildCount());
-                    //Log.d(TAG, "touch index: " + index);
-                    if (index >= colors.getChildCount()) return false;
-                    View button = colors.getChildAt(index);
-                    clickColor(button);
-                }
-                return true;
-            }
-        });*/
         
         setHUDVisibility(false, false);
 
@@ -274,20 +237,10 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         // clickDebug(null); // auto-debug mode for partners
    }
 
-    // MrShaky.Listener
-    public void onShake() {
-        mSlate.undo();
-    }
-
-    public float getAccel() {
-        return mShaky.getCurrentMagnitude();
-    }
-
     @Override
     public void onPause() {
         super.onPause();
         saveDrawing(WIP_FILENAME, true);
-        mShaky.pause();
     }
 
     @Override
@@ -300,7 +253,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                 "landscape".equals(orientation)
                     ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                     : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        mShaky.resume();
     }
 
     @Override
