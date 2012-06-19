@@ -15,13 +15,12 @@
   limitations under the License.
 -->
 <resources>
-    <dimen name="button_bar_height">28dp</dimen>
     <dimen name="ui_font_size">20sp</dimen>
     <dimen name="default_pen_size_min">4dp</dimen>
     <dimen name="default_pen_size_max">24dp</dimen>
-    <dimen name="action_bar_height">36dp</dimen>
-    <dimen name="action_bar_logo_width">36dip</dimen>
-    <dimen name="action_button_width">40dp</dimen>
+    <dimen name="action_bar_height">48dp</dimen>
+    <dimen name="action_bar_logo_width">48dip</dimen>
+    <dimen name="action_button_width">48dp</dimen>
     <dimen name="action_button_padding_v">4dp</dimen>
     <dimen name="tool_palette_gutter">6dp</dimen>
 </resources>

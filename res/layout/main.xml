@@ -16,7 +16,7 @@
    	<include layout="@layout/colors_horizontal"
    	    android:id="@+id/colors"
    		android:layout_width="match_parent"
-   		android:layout_height="70dp"
+   		android:layout_height="96dp"
    		android:layout_gravity="bottom"
    		/>
    	
@@ -25,7 +25,7 @@
    		android:layout_width="52dp"
    		android:layout_height="match_parent"
    		android:layout_marginTop="@dimen/action_bar_height"
-   		android:layout_marginBottom="70dp"
+   		android:layout_marginBottom="96dp"
         android:layout_gravity="left"
    		/>
 

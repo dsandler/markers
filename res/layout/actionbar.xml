@@ -18,7 +18,7 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:id="@+id/actionbar"
   android:layout_width="match_parent"
-  android:layout_height="@dimen/button_bar_height"
+  android:layout_height="@dimen/action_bar_height"
   >
   <RelativeLayout
   	android:id="@+id/actionbar_contents"
@@ -53,6 +53,7 @@
             android:src="@drawable/doodlebug" 
             android:contentDescription="debug mode"
             android:onClick="clickDebug"
+            android:visibility="gone"
             />
           <ImageButton
             android:id="@+id/undo"
@@ -77,7 +78,7 @@
             />  
           <ImageButton
             android:id="@+id/save" 
-            android:src="@drawable/newpage"
+            android:src="@drawable/check"
             android:contentDescription="save drawing"
             android:onClick="clickSave"
             style="@style/ActionBar.Icon"
