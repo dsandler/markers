@@ -37,30 +37,26 @@ import android.widget.Toast;
 
 import com.android.slate.Slate;
 
-public class MarkersActivity extends Activity implements MrShaky.Listener
+public class MarkersActivity extends Activity
 {
     final static int LOAD_IMAGE = 1000;
 
-    static final String TAG = "Markers";
+    private static final String TAG = "Markers";
+    private static final boolean DEBUG = false;
 
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
     public static final String IMAGE_TEMP_DIRNAME = IMAGE_SAVE_DIRNAME + "/.temporary";
     public static final String WIP_FILENAME = "temporary.png";
 
-    private static final String PREFS_NAME = "MarkersPrefs";
+    private boolean mJustLoadedImage = false;
 
-    Slate mSlate;
+    private Slate mSlate;
 
-    boolean mJustLoadedImage = false;
+    private ToolButton mLastTool, mActiveTool;
+    private ToolButton mLastColor, mActiveColor;
+    private ToolButton mLastPenType, mActivePenType;
 
-    protected ToolButton mLastTool, mActiveTool;
-
-    View mDebugButton;
-
-    protected ToolButton mLastColor, mActiveColor;
-
-    protected ToolButton mLastPenType, mActivePenType;
-
+    private View mDebugButton;
     private View mColorsView;
     private View mActionBarView;
     private View mToolsView;
@@ -118,8 +114,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         getWindow().setBackgroundDrawableResource(R.drawable.transparent);
         getWindow().setAttributes(lp);
 
-        //Log.d(TAG, "window format: " + getWindow().getAttributes().format);
-        
         setContentView(R.layout.main);
         mSlate = (Slate) getLastNonConfigurationInstance();
         if (mSlate == null) {
@@ -234,7 +228,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
 
         mDebugButton = findViewById(R.id.debug);
         
-        // clickDebug(null); // auto-debug mode for partners
+        // clickDebug(null); // auto-debug mode for testing devices
    }
 
     @Override
@@ -258,10 +252,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     public void onConfigurationChanged (Configuration newConfig) {
     	super.onConfigurationChanged(newConfig);
-//    	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-//            setContentView(R.layout.main);
-//            findViewById
-//    	}
     }
 
     @Override
@@ -273,8 +263,6 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     protected void onStop() {
         super.onStop();
-
-        //mSlate.recycle(); -- interferes with newly asynchronous saving code when sharing
     }
 
     private String dumpBundle(Bundle b) {
@@ -294,10 +282,8 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
     @Override
     protected void onStart() {
         super.onStart();
-        //Log.d(TAG, "onStart");
-        
         Intent startIntent = getIntent();
-        Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
+        if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
         String a = startIntent.getAction();
         if (a.equals(Intent.ACTION_EDIT)) {
             // XXX: what happens to the old drawing? we should really move to auto-save
@@ -439,7 +425,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
         File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
         final String filePath = new File(d, filename).toString();
-        Log.d(TAG, "loadDrawing: " + filePath);
+        if (DEBUG) Log.d(TAG, "loadDrawing: " + filePath);
         
         if (d.exists()) {
             BitmapFactory.Options opts = new BitmapFactory.Options();
@@ -471,7 +457,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             // clone bitmap to keep it safe
             localBits = currentBuffer.copy(currentBuffer.getConfig(), false);
         } else {
-            Log.e(TAG, "save: null bitmap");
+            if (DEBUG) Log.e(TAG, "save: null bitmap");
             return;
         }
         
@@ -498,7 +484,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
                         }
                     }
                     File file = new File(d, _filename);
-                    Log.d(TAG, "save: saving " + file);
+                    if (DEBUG) Log.d(TAG, "save: saving " + file);
                     OutputStream os = new FileOutputStream(file);
                     localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
                     localBits.recycle();
@@ -600,7 +586,7 @@ public class MarkersActivity extends Activity implements MrShaky.Listener
             Bitmap b = MediaStore.Images.Media.getBitmap(getContentResolver(), contentUri);
             if (b != null) {
                 mSlate.paintBitmap(b);
-                Log.d(TAG, "successfully loaded bitmap: " + b);
+                if (DEBUG) Log.d(TAG, "successfully loaded bitmap: " + b);
             } else {
                 Log.e(TAG, "couldn't get bitmap from " + contentUri);
             }
