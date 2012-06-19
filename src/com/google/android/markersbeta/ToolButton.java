@@ -1,7 +1,5 @@
 package com.google.android.markersbeta;
 
-import java.lang.ref.WeakReference;
-
 import com.android.slate.Slate;
 
 import android.content.Context;
@@ -17,11 +15,9 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.LinearLayout;
 
 public class ToolButton extends View {
     public static class ToolCallback {

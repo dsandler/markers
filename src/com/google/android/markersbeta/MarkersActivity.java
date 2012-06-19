@@ -463,7 +463,6 @@ public class MarkersActivity extends Activity
         
         final String _filename = filename;
         final boolean _temporary = temporary;
-        final boolean _animate = animate;
         final boolean _share = share;
         final boolean _clear = clear;
 
