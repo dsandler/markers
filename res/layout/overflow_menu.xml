@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000"
+    android:paddingLeft="@dimen/tool_palette_gutter"
+    android:paddingBottom="@dimen/tool_palette_gutter"
+    android:orientation="vertical" >
+          <Button
+            android:id="@+id/share" 
+            style="@style/ActionBar.MenuItem"
+            android:src="@drawable/share"
+            android:text="Share"
+            android:contentDescription="share drawing"
+            android:onClick="clickShare"
+            />
+          <Button
+            android:id="@+id/load"
+            style="@style/ActionBar.MenuItem"
+            android:src="@drawable/load"
+            android:text="Load"
+            android:contentDescription="load image"
+            android:onClick="clickLoad"
+            />
+          <Button
+            android:id="@+id/debug"
+            style="@style/ActionBar.MenuItem"
+            android:src="@drawable/doodlebug" 
+            android:text="Debug"
+            android:contentDescription="debug mode"
+            android:onClick="clickDebug"
+            />
+          <Button
+            android:id="@+id/about" 
+            style="@style/ActionBar.MenuItem"
+            android:text="About"
+            android:contentDescription="about markers"
+            android:onClick="clickAbout"
+            />
+</LinearLayout>

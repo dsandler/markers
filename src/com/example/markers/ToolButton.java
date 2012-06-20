@@ -1,0 +1,327 @@
+/*
+ * Copyright (C) 2012 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.example.markers;
+
+import com.android.slate.Slate;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.Resources;
+import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+
+public class ToolButton extends View {
+    public static class ToolCallback {
+        public void setZoomMode(ToolButton me) {}
+        public void setPenMode(ToolButton me, float min, float max) {}
+        public void setPenColor(ToolButton me, int color) {}
+        public void restore(ToolButton me) {}
+        public void setPenType(ToolButton penTypeButton, int penType) {}
+    }
+
+    // Enable a delay here to use "shifted" mode, where longpressing a tool will only assert that
+    // tool until you lift your finger
+    //    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 300; // ms
+    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 0; // ms
+    
+    private ToolCallback mCallback;
+    private long mDownTime;
+    
+    public ToolButton(Context context) {
+        super(context);
+    }
+
+    public ToolButton(Context context, AttributeSet attrs) {
+        this(context, attrs, 0);
+    }
+    
+    public static class PenToolButton extends ToolButton {
+        public float strokeWidthMin, strokeWidthMax;
+
+        public PenToolButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+
+            TypedArray a = context.obtainStyledAttributes(attrs, 
+                    R.styleable.PenToolButton, defStyle, 0);
+            
+            strokeWidthMin = a.getDimension(R.styleable.PenToolButton_strokeWidthMin, -1);
+            strokeWidthMax = a.getDimension(R.styleable.PenToolButton_strokeWidthMax, -1);
+            
+            a.recycle();
+        }
+        
+        public PenToolButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setPenMode(this, strokeWidthMin, strokeWidthMax);
+        }
+        
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            
+            final Resources res = getResources();
+            final Paint pt = new Paint(Paint.ANTI_ALIAS_FLAG);
+            ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
+            pt.setColor(fg.getColorForState(getDrawableState(), fg.getDefaultColor()));
+            
+            float r1 = strokeWidthMin * 0.5f;
+            float r2 = strokeWidthMax * 0.5f;
+            
+            final boolean vertical = getHeight() > getWidth();
+            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
+            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+            final float center = (vertical ? getWidth() : getHeight()) / 2;
+            final float iter = 1f / (vertical ? getHeight() : getWidth());
+            final float amplitude = (center-r2)*0.5f;
+
+            if (r1 > center) r1 = center;
+            if (r2 > center) r2 = center;
+
+            for (float f = 0f; f < 1.0f; f += iter) {
+                final float y = com.android.slate.Slate.lerp(start, end, f);
+                final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
+                final float r = com.android.slate.Slate.lerp(r1, r2, f);
+                canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, pt);
+            }
+            canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
+        }
+    }
+
+    public static class PenTypeButton extends ToolButton {
+        public int penType;
+        private Bitmap icon;
+
+        public PenTypeButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+
+            TypedArray a = context.obtainStyledAttributes(attrs, 
+                    R.styleable.PenTypeButton, defStyle, 0);
+            
+            penType = a.getInt(R.styleable.PenTypeButton_penType, 0);
+            if (penType == Slate.TYPE_AIRBRUSH) {
+                icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_dark);
+            }
+            
+            a.recycle();
+        }
+        
+        public PenTypeButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setPenType(this, penType);
+        }
+
+        private RectF tmpRF = new RectF();
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float x = 0.5f*getWidth();
+            float y = 0.5f*getHeight();
+            float r = Math.min(getWidth()-getPaddingLeft()-getPaddingRight(),
+                             getHeight()-getPaddingTop()-getPaddingBottom()) * 0.5f;
+
+
+            final Resources res = getResources();
+            final Paint pt = new Paint(Paint.ANTI_ALIAS_FLAG);
+            ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
+            int color = fg.getColorForState(getDrawableState(), fg.getDefaultColor());
+            pt.setColor(color);
+            pt.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+            tmpRF.set(x-r,y-r,x+r,y+r);
+
+            if (penType == Slate.TYPE_WHITEBOARD) {
+                pt.setAlpha(0xFF);
+                canvas.drawCircle(x, y, r, pt);
+            } else if (penType == Slate.TYPE_FELTTIP) {
+                pt.setAlpha(0x80);
+                canvas.drawCircle(x, y, r, pt);
+            } else if (penType == Slate.TYPE_AIRBRUSH) {
+                pt.setAlpha(0xFF);
+                canvas.drawBitmap(icon, null, tmpRF, pt);
+            }
+        }
+    }
+
+    public static class SwatchButton extends ToolButton {
+        public int color;
+        
+        public SwatchButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+
+            TypedArray a = context.obtainStyledAttributes(attrs, 
+                    R.styleable.SwatchButton, defStyle, 0);
+            
+            color = a.getColor(R.styleable.SwatchButton_color, 0xFFFFFF00);
+            
+            a.recycle();
+        }
+        
+        public SwatchButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setPenColor(this, color);
+        }
+        final int HIGHLIGHT_STROKE_COLOR = 0xFFFFFFFF;
+        final int HIGHLIGHT_STROKE_COLOR_ALT = 0xFFC0C0C0;
+        
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int p = this.getPaddingLeft();
+            if ((color & 0xFF000000) == 0) { // transparent
+                final Resources res = getResources();
+                final Drawable tile = res.getDrawable(R.drawable.transparent_tool);
+                tile.setBounds(canvas.getClipBounds());
+                tile.draw(canvas);
+            } else {
+                canvas.drawColor(color);
+            }
+            if (isSelected() || isPressed()) {
+                Paint paint = new Paint();
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(p);
+                paint.setColor(color == HIGHLIGHT_STROKE_COLOR 
+                        ? HIGHLIGHT_STROKE_COLOR_ALT 
+                        : HIGHLIGHT_STROKE_COLOR);
+                p /= 2;
+                canvas.drawRect(p, p, getWidth()-p, getHeight()-p, paint);
+            }
+        }
+    }
+
+    public static class ZoomToolButton extends ToolButton {
+        public ZoomToolButton(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+        }
+        
+        public ZoomToolButton(Context context, AttributeSet attrs) {
+            this(context, attrs, 0);
+        }
+        
+        @Override
+        void activate() {
+            super.activate();
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setZoomMode(this);
+        }
+    }
+
+    public ToolButton(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+
+        setClickable(true);
+    }
+    
+    void setCallback(ToolCallback cb) {
+        mCallback = cb;
+    }
+    
+    ToolCallback getCallback() {
+        return mCallback;
+    }
+    
+    public void click() {
+        activate();
+        commit();
+    }
+    
+    void activate() {
+        // pass
+    }
+    
+    void deactivate() {
+        setSelected(false);
+        setPressed(false);
+    }
+    
+    void commit() {
+        setPressed(false);
+        setSelected(true);
+    }
+    
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        final int action = event.getAction();
+        
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                if (!isSelected()) {
+                    mDownTime = event.getEventTime();
+                    setPressed(true);
+                    activate();
+                    invalidate();
+                }
+                if (PERMANENT_TOOL_SWITCH_THRESHOLD > 0 
+                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                    return true;
+                } else {
+                    // FALL THROUGH.
+                    // Split touch events only appeared in Honeycomb; before this we
+                    // want to simply switch the tool on DOWN, end of story.
+                }
+            case MotionEvent.ACTION_UP:
+                if (isPressed()) {
+                    setPressed(false);
+                    if (PERMANENT_TOOL_SWITCH_THRESHOLD > 0
+                            && event.getEventTime() - mDownTime > PERMANENT_TOOL_SWITCH_THRESHOLD) {
+                        deactivate();
+                        final ToolCallback cb = mCallback;
+                        if (cb != null) cb.restore(this);
+                    } else {
+                        commit();
+                    }
+                    invalidate();
+                }
+                return true;
+        }
+        return false;
+    }
+    
+    @Override
+    protected void onDraw(Canvas canvas) {
+        final Resources res = getResources();
+        ColorStateList bg = res.getColorStateList(R.color.pentool_bg);
+        canvas.drawColor(bg.getColorForState(getDrawableState(), bg.getDefaultColor()));
+    }
+}
