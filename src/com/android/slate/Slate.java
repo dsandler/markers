@@ -43,7 +43,7 @@ import com.example.markers.R;
 
 public class Slate extends View {
 
-    static final boolean DEBUG = true;
+    static final boolean DEBUG = false;
     static final String TAG = "Slate";
     
     public static final boolean HWLAYER = true;
@@ -383,12 +383,14 @@ public class Slate extends View {
 
         setFocusable(true);
         
-        if (HWLAYER) {
-            setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        } else if (SWLAYER) {
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        } else {
-            setLayerType(View.LAYER_TYPE_NONE, null);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            if (HWLAYER) {
+                setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            } else if (SWLAYER) {
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            } else {
+                setLayerType(View.LAYER_TYPE_NONE, null);
+            }
         }
         
         if (true) {
