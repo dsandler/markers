@@ -35,6 +35,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -57,6 +58,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.slate.Slate;
@@ -165,6 +167,10 @@ public class MarkersActivity extends Activity
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
         
+        TextView title = (TextView) mActionBarView.findViewById(R.id.logotype);
+        Typeface light = Typeface.create("sans-serif-light", Typeface.NORMAL);
+        title.setTypeface(light);
+
         setHUDVisibility(false, false);
 
         final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {

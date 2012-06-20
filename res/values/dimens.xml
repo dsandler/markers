@@ -15,7 +15,8 @@
   limitations under the License.
 -->
 <resources>
-    <dimen name="ui_font_size">20sp</dimen>
+    <dimen name="ui_font_size">18sp</dimen>
+    <dimen name="title_size">20sp</dimen>
     <dimen name="default_pen_size_min">4dp</dimen>
     <dimen name="default_pen_size_max">24dp</dimen>
     <dimen name="action_bar_height">48dp</dimen>
