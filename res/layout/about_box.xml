@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent" 
+    android:padding="16dp"
+    >
 
     <ImageView
         android:id="@+id/logo"
@@ -17,10 +19,21 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/logo"
         android:layout_centerHorizontal="true"
+        android:textSize="30sp"
+        android:layout_marginBottom="16dp"
         android:text="Markers"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        />
 
-    <LinearLayout
+    <WebView
+        android:id="@+id/html"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:layout_below="@+id/title"
+        android:layout_centerHorizontal="true"
+        />
+    
+    <!-- <LinearLayout
         android:id="@+id/linearLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,6 +47,6 @@
             android:text="Markers on Google Play"
             android:onClick="clickMarketLink"
             />
-    </LinearLayout>
+    </LinearLayout> -->
 
 </RelativeLayout>

@@ -631,6 +631,13 @@ public class MarkersActivity extends Activity
         startActivity(urlIntent);
     }
 
+    public void clickSiteLink(View unused) {
+        hideOverflow();
+        Intent urlIntent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("http://dsandler.org/markers?from=app"));
+        startActivity(urlIntent);
+    }
+
     private void showOverflow() {
         mMenuDialog.show();
     }

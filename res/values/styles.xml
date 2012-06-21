@@ -55,5 +55,5 @@
     <style name="ActionBar.Menu">
         <item name="android:background">#FF000000</item>
         <item name="android:gravity">right|top</item>
-        </style>
+    </style>
 </resources>

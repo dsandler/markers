@@ -16,6 +16,7 @@
 
 package com.google.android.apps.markers;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -42,9 +43,11 @@ class About {
     static String loadFileText(Context context, String filename) {
         try {
             StringBuffer fileData = new StringBuffer();
-            InputStreamReader reader = new InputStreamReader(context.getAssets().open(filename));
-            while ( reader.read(buf) > 0 ) {
-                fileData.append(buf);
+            final BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(context.getAssets().open(filename)));
+            String line;
+            while ( (line = reader.readLine()) != null ) {
+                fileData.append(line);
             }
             return fileData.toString();
         } catch (IOException e) {
@@ -65,32 +68,6 @@ class About {
         return version;
     }
 
-	static void showHtml(final MarkersActivity activity) {
-		final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-		builder.setTitle(null);
-		builder.setCancelable(true);
-//		builder.setPositiveButton(R.string.about_dismiss_button,
-//				new DialogInterface.OnClickListener() {
-//					public void onClick(DialogInterface dialog, int which) {
-//					}
-//				});
-//		builder.setMessage(R.string.about_body);
-        
-        String htmlString = loadFileText(activity, "about.html");
-        if (htmlString != null) {
-            String licenseString = loadFileText(activity, "license.html");
-            String version = getVersionString(activity);
-            htmlString = htmlString.replaceAll("__VERSION__", version);
-            htmlString = htmlString.replaceAll("__LICENSE__", licenseString);
-
-            WebView webview = new WebView(activity);
-            webview.loadDataWithBaseURL("file:///android_asset/", htmlString, "text/html", "utf-8", null);
-            builder.setView(webview);
-        } else {
-            builder.setMessage("Markers");
-        }
-	}
-
 	static void show(final MarkersActivity activity) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         builder.setTitle(null);
@@ -104,14 +81,24 @@ class About {
         title.setTypeface(light);
         title.setText(activity.getString(R.string.app_name) + " " + getVersionString(activity));
 
+        WebView webview = (WebView) layout.findViewById(R.id.html);
+        webview.loadDataWithBaseURL("file:///android_asset/", 
+                loadFileText(activity, "about.html"), "text/html", "utf-8", null);
+
         builder.setView(layout);
-        builder.setNegativeButton("Rate/Share on Google Play", new OnClickListener() {
+        builder.setNegativeButton("Website", new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                activity.clickSiteLink(null);
+            }});
+        builder.setNeutralButton("on Play Store", new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
                 activity.clickMarketLink(null);
             }});
-        builder.setNeutralButton("Share via QR code", new OnClickListener() {
+        builder.setPositiveButton("QR code", new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
