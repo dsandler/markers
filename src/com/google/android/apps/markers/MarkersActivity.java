@@ -604,7 +604,12 @@ public class MarkersActivity extends Activity
 
     public void clickAbout(View unused) {
         hideOverflow();
-        Toast.makeText(this, "Markers", Toast.LENGTH_SHORT).show();
+        About.show(this);
+    }
+
+    public void clickQr(View unused) {
+        hideOverflow();
+        QrCode.show(this);
     }
 
     private void showOverflow() {

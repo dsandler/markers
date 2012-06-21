@@ -53,4 +53,11 @@
             android:contentDescription="about markers"
             android:onClick="clickAbout"
             />
+          <Button
+            android:id="@+id/qr" 
+            style="@style/ActionBar.MenuItem"
+            android:text="Share Markers"
+            android:contentDescription="QR code for markers"
+            android:onClick="clickQr"
+            />
 </LinearLayout>

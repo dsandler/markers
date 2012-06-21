@@ -16,20 +16,68 @@
 
 package com.google.android.apps.markers;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.CharBuffer;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.AssetFileDescriptor;
+import android.webkit.WebView;
 
 class About {
+    static char buf[] = new char[1024];
+
+    static String loadFileText(Context context, String filename) {
+        try {
+            StringBuffer fileData = new StringBuffer();
+            InputStreamReader reader = new InputStreamReader(context.getAssets().open(filename));
+            while ( reader.read(buf) > 0 ) {
+                fileData.append(buf);
+            }
+            return fileData.toString();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
 	static void show(final Activity activity) {
 		final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-		builder.setTitle(R.string.about_title);
-		builder.setCancelable(false);
+		builder.setTitle(null);
+		builder.setCancelable(true);
 //		builder.setPositiveButton(R.string.about_dismiss_button,
 //				new DialogInterface.OnClickListener() {
 //					public void onClick(DialogInterface dialog, int which) {
 //					}
 //				});
-		builder.setMessage(R.string.about_body);
+//		builder.setMessage(R.string.about_body);
+        
+        String htmlString = loadFileText(activity, "about.html");
+        if (htmlString != null) {
+            String licenseString = loadFileText(activity, "license.html");
+            String version = "";
+            try {
+                PackageInfo pi = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+                if (pi != null) {
+                    version = pi.versionName;
+                }
+            } catch (NameNotFoundException e) {
+                //pass
+            }
+            htmlString = htmlString.replaceAll("__VERSION__", version);
+            htmlString = htmlString.replaceAll("__LICENSE__", licenseString);
+
+            WebView webview = new WebView(activity);
+            webview.loadDataWithBaseURL("file:///android_asset/", htmlString, "text/html", "utf-8", null);
+            builder.setView(webview);
+        } else {
+            builder.setMessage("Markers");
+        }
 		builder.create().show();
 	}
 }
