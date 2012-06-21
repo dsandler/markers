@@ -22,7 +22,6 @@
     <supports-screens android:anyDensity="true" />
               
     <application android:label="@string/app_name" android:icon="@drawable/launcher_icon"
-            android:theme="@android:style/Theme.Light.NoTitleBar"
             android:hardwareAccelerated="true">
         <activity android:name="MarkersActivity"
                   android:label="@string/app_name"

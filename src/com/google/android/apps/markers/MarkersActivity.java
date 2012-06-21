@@ -133,12 +133,14 @@ public class MarkersActivity extends Activity
     public void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
-        
+
+        final Window win = getWindow();
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.copyFrom(getWindow().getAttributes());
+        lp.copyFrom(win.getAttributes());
         lp.format = PixelFormat.RGBA_8888;
-        getWindow().setBackgroundDrawableResource(R.drawable.transparent);
-        getWindow().setAttributes(lp);
+        win.setBackgroundDrawableResource(R.drawable.transparent);
+        win.setAttributes(lp);
+        win.requestFeature(Window.FEATURE_NO_TITLE);
 
         setContentView(R.layout.main);
         mSlate = (Slate) getLastNonConfigurationInstance();
@@ -610,6 +612,23 @@ public class MarkersActivity extends Activity
     public void clickQr(View unused) {
         hideOverflow();
         QrCode.show(this);
+    }
+
+    public void clickShareMarketLink(View unused) {
+        hideOverflow();
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.setType("text/plain");
+        sendIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name));
+        sendIntent.putExtra(Intent.EXTRA_TEXT,
+                "http://play.google.com/store/apps/details?id=" + getPackageName());
+        startActivity(Intent.createChooser(sendIntent, "Share the Markers app with:"));
+    }
+
+    public void clickMarketLink(View unused) {
+        hideOverflow();
+        Intent urlIntent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("market://details?id=" + getPackageName()));
+        startActivity(urlIntent);
     }
 
     private void showOverflow() {
