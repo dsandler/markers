@@ -20,6 +20,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.widget.ImageView;
 
+import org.dsandler.apps.markers.R;
+
 class QrCode {
 	static void show(final Activity activity) {
 		final AlertDialog.Builder builder = new AlertDialog.Builder(activity, android.R.style.Theme_Light_Panel);

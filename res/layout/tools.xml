@@ -16,7 +16,7 @@
 -->
 <LinearLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:markers="http://schemas.android.com/apk/res/com.google.android.apps.markers"
+	xmlns:markers="http://schemas.android.com/apk/res/org.dsandler.apps.markers"
 	android:id="@+id/tools"
     style="@style/ActionBar.Bar"
 	android:orientation="vertical"
@@ -25,7 +25,7 @@
     android:paddingRight="@dimen/tool_palette_gutter"
 	>
     <view
-        class="com.google.android.apps.markers.ToolButton$PenToolButton"
+        class="com.google.android.apps.markers.ToolButton"
         android:id="@+id/pen_thin"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -35,7 +35,7 @@
         markers:strokeWidthMax="6dp"
         />
     <view
-        class="com.google.android.apps.markers.ToolButton$PenToolButton"
+        class="com.google.android.apps.markers.ToolButton"
         android:id="@+id/pen_medium"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -45,7 +45,7 @@
         markers:strokeWidthMax="10dp"
         />
     <view
-        class="com.google.android.apps.markers.ToolButton$PenToolButton"
+        class="com.google.android.apps.markers.ToolButton"
         android:id="@+id/pen_thick"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -55,7 +55,7 @@
         markers:strokeWidthMax="20dp"
         />
     <view
-        class="com.google.android.apps.markers.ToolButton$PenToolButton"
+        class="com.google.android.apps.markers.ToolButton"
         android:id="@+id/fat_marker"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

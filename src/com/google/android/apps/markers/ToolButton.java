@@ -33,6 +33,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import org.dsandler.apps.markers.R;
+
 public class ToolButton extends View {
     public static class ToolCallback {
         public void setZoomMode(ToolButton me) {}

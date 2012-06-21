@@ -37,6 +37,8 @@ import android.view.View;
 import android.webkit.WebView;
 import android.widget.TextView;
 
+import org.dsandler.apps.markers.R;
+
 class About {
     static char buf[] = new char[1024];
 

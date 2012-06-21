@@ -61,6 +61,8 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.dsandler.apps.markers.R;
+
 public class MarkersActivity extends Activity
 {
     final static int LOAD_IMAGE = 1000;

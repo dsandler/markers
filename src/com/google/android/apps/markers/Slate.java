@@ -39,6 +39,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import org.dsandler.apps.markers.R;
+
 public class Slate extends View {
 
     static final boolean DEBUG = false;
