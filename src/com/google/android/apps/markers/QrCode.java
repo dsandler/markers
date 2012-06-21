@@ -22,8 +22,8 @@ import android.widget.ImageView;
 
 class QrCode {
 	static void show(final Activity activity) {
-		final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-		builder.setTitle(R.string.qr_title);
+		final AlertDialog.Builder builder = new AlertDialog.Builder(activity, android.R.style.Theme_Light_Panel);
+		builder.setTitle(null);
 		builder.setCancelable(true);
 		ImageView iv = new ImageView(activity);
 		iv.setImageResource(R.drawable.qr);
