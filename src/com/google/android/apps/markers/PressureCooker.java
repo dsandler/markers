@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.slate;
+package com.google.android.apps.markers;
 
 import android.content.Context;
 import android.content.SharedPreferences;

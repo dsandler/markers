@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.markers;
+package com.google.android.apps.markers;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -60,8 +60,6 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.android.slate.Slate;
 
 public class MarkersActivity extends Activity
 {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.slate;
+package com.google.android.apps.markers;
 
 import java.util.ArrayList;
 
@@ -38,8 +38,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-
-import com.example.markers.R;
 
 public class Slate extends View {
 

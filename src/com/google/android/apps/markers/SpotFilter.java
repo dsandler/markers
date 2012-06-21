@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.slate;
+package com.google.android.apps.markers;
 
 import java.util.Iterator;
 import java.util.LinkedList;

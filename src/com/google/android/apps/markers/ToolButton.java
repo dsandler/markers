@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.markers;
-
-import com.android.slate.Slate;
+package com.google.android.apps.markers;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -109,9 +107,9 @@ public class ToolButton extends View {
             if (r2 > center) r2 = center;
 
             for (float f = 0f; f < 1.0f; f += iter) {
-                final float y = com.android.slate.Slate.lerp(start, end, f);
+                final float y = Slate.lerp(start, end, f);
                 final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
-                final float r = com.android.slate.Slate.lerp(r1, r2, f);
+                final float r = Slate.lerp(r1, r2, f);
                 canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, pt);
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
