@@ -1,15 +1,21 @@
+----------------------------------------------------------------------
 [Promo]
 Simple, pressure-sensitive drawing on your phone or tablet.
 
+----------------------------------------------------------------------
 [Description]
 
-Markers is a simple, multitouch, pressure-sensitive drawing app perfect for phones, small tablets, and full-size tablets. 
+Markers is a simple, multitouch, pressure-sensitive drawing app that’s perfect for phones and tablets.
 
-Features: 
-• Pressure sensitivity: most touchscreen devices report some pressure and size information to Markers, which it uses 
+☛ Pressure sensitivity that works with most Android devices, even without a stylus. (But if you have a stylus, it works great with that too.)
 
-• Multitouch: two fingers make two lines, three make three, and so on—up to the limits of your hardware, typically 5 simultaneous touches for phones and 10 for tablets.
+☛ Multitouch: two fingers make two lines, three make three, and so on—up to the limits of your device (typically 5 simultaneous touches for phones and 10 for tablets.
 
-• Kid-friendly UI: Every pen size and color is on-screen; multitouch drawing means accidental touches (such as kid hands on the edge of the display) won't prevent drawing strokes
+☛ Kid-friendly interface: Every pen size and color is on-screen; multitouch drawing means accidental touches (such as kid hands on the edges of the display) won't prevent any little fingers from painting.
 
-#vim: set tw=0:
+☛ Plays well with others: share your drawings to other apps, and share images into Markers to draw on top of them.
+
+Markers is open source software; see the website for source code.
+
+----------------------------------------------------------------------
+#vim: set tw=0 linebreak:
