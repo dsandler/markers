@@ -69,8 +69,8 @@ public class ToolButton extends View {
             TypedArray a = context.obtainStyledAttributes(attrs, 
                     R.styleable.PenToolButton, defStyle, 0);
             
-            strokeWidthMin = a.getDimension(R.styleable.PenToolButton_strokeWidthMin, -1);
-            strokeWidthMax = a.getDimension(R.styleable.PenToolButton_strokeWidthMax, -1);
+            strokeWidthMin = a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1);
+            strokeWidthMax = a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10);
             
             a.recycle();
         }
