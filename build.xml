@@ -26,7 +26,7 @@
          application and should be checked into Version Control Systems.
 
          -->
-    <property file="ant.properties" />
+    <property file="build.properties" />
 
     <!-- The project.properties file is created and updated by the 'android'
          tool, as well as ADT.

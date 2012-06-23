@@ -15,6 +15,8 @@ Markers is a simple, multitouch, pressure-sensitive drawing app that’s perfect
 
 ☛ Plays well with others: share your drawings to other apps, and share images into Markers to draw on top of them.
 
+Questions? Bugs? Ideas? Use the email link below. Got a great drawing to share with the world? Share it on Google+: http://dsandler.org/markers/+
+
 Markers is open source software; see the website for source code.
 
 ----------------------------------------------------------------------
