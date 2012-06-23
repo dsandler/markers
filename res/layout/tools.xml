@@ -24,6 +24,7 @@
 	android:layout_height="match_parent"
     android:paddingRight="@dimen/tool_palette_gutter"
 	>
+    <!-- felt tip pen -->
     <view
         class="com.google.android.apps.markers.ToolButton$PenToolButton"
         android:id="@+id/pen_thin"
@@ -31,9 +32,10 @@
         android:layout_height="match_parent"
         android:padding="10dp"
         android:layout_weight="1"
-        markers:strokeWidthMin="1dp"
-        markers:strokeWidthMax="6dp"
+        markers:strokeWidthMin="2dp"
+        markers:strokeWidthMax="4dp"
         />
+    <!-- small brush -->
     <view
         class="com.google.android.apps.markers.ToolButton$PenToolButton"
         android:id="@+id/pen_medium"
@@ -44,6 +46,7 @@
         markers:strokeWidthMin="0.5dp"
         markers:strokeWidthMax="10dp"
         />
+    <!-- large brush -->
     <view
         class="com.google.android.apps.markers.ToolButton$PenToolButton"
         android:id="@+id/pen_thick"
@@ -52,8 +55,9 @@
         android:padding="10dp"
         android:layout_weight="1"
         markers:strokeWidthMin="2dp"
-        markers:strokeWidthMax="20dp"
+        markers:strokeWidthMax="24dp"
         />
+    <!-- fat marker -->
     <view
         class="com.google.android.apps.markers.ToolButton$PenToolButton"
         android:id="@+id/fat_marker"
