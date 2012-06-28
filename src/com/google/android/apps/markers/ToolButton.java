@@ -52,12 +52,23 @@ public class ToolButton extends View {
     private ToolCallback mCallback;
     private long mDownTime;
     
+    protected Paint mPaint;
+    protected ColorStateList mFgColor, mBgColor;
+    
     public ToolButton(Context context) {
         super(context);
     }
 
     public ToolButton(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
+    }
+    
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mFgColor = getResources().getColorStateList(R.color.pentool_fg);
+        mBgColor = getResources().getColorStateList(R.color.pentool_bg);
     }
     
     public static class PenToolButton extends ToolButton {
@@ -90,10 +101,7 @@ public class ToolButton extends View {
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             
-            final Resources res = getResources();
-            final Paint pt = new Paint(Paint.ANTI_ALIAS_FLAG);
-            ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
-            pt.setColor(fg.getColorForState(getDrawableState(), fg.getDefaultColor()));
+            mPaint.setColor(mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor()));
             
             float r1 = strokeWidthMin * 0.5f;
             float r2 = strokeWidthMax * 0.5f;
@@ -112,15 +120,15 @@ public class ToolButton extends View {
                 final float y = Slate.lerp(start, end, f);
                 final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
                 final float r = Slate.lerp(r1, r2, f);
-                canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, pt);
+                canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, mPaint);
             }
-            canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, pt);
+            canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
         }
     }
 
     public static class PenTypeButton extends ToolButton {
         public int penType;
-        private Bitmap icon;
+        public Bitmap icon;
 
         public PenTypeButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
@@ -129,15 +137,20 @@ public class ToolButton extends View {
                     R.styleable.PenTypeButton, defStyle, 0);
             
             penType = a.getInt(R.styleable.PenTypeButton_penType, 0);
-            if (penType == Slate.TYPE_AIRBRUSH) {
-                icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_dark);
-            }
             
             a.recycle();
         }
         
         public PenTypeButton(Context context, AttributeSet attrs) {
             this(context, attrs, 0);
+        }
+        
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            if (penType == Slate.TYPE_AIRBRUSH) {
+                icon = BitmapFactory.decodeResource(getResources(), R.drawable.airbrush_dark);
+            }
         }
         
         @Override
@@ -151,35 +164,37 @@ public class ToolButton extends View {
         @Override
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            if (mPaint == null) return;
+
             float x = 0.5f*getWidth();
             float y = 0.5f*getHeight();
             float r = Math.min(getWidth()-getPaddingLeft()-getPaddingRight(),
                              getHeight()-getPaddingTop()-getPaddingBottom()) * 0.5f;
 
 
-            final Resources res = getResources();
-            final Paint pt = new Paint(Paint.ANTI_ALIAS_FLAG);
-            ColorStateList fg = res.getColorStateList(R.color.pentool_fg);
-            int color = fg.getColorForState(getDrawableState(), fg.getDefaultColor());
-            pt.setColor(color);
-            pt.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+            int color = mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor());
+            mPaint.setColor(color);
+            mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
             tmpRF.set(x-r,y-r,x+r,y+r);
 
             if (penType == Slate.TYPE_WHITEBOARD) {
-                pt.setAlpha(0xFF);
-                canvas.drawCircle(x, y, r, pt);
+                mPaint.setAlpha(0xFF);
+                canvas.drawCircle(x, y, r, mPaint);
             } else if (penType == Slate.TYPE_FELTTIP) {
-                pt.setAlpha(0x80);
-                canvas.drawCircle(x, y, r, pt);
+                mPaint.setAlpha(0x80);
+                canvas.drawCircle(x, y, r, mPaint);
             } else if (penType == Slate.TYPE_AIRBRUSH) {
-                pt.setAlpha(0xFF);
-                canvas.drawBitmap(icon, null, tmpRF, pt);
+                mPaint.setAlpha(0xFF);
+                if (icon != null) {
+                    canvas.drawBitmap(icon, null, tmpRF, mPaint);
+                }
             }
         }
     }
 
     public static class SwatchButton extends ToolButton {
         public int color;
+        private Drawable mTransparentTile;
         
         public SwatchButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
@@ -188,7 +203,7 @@ public class ToolButton extends View {
                     R.styleable.SwatchButton, defStyle, 0);
             
             color = a.getColor(R.styleable.SwatchButton_color, 0xFFFFFF00);
-            
+
             a.recycle();
         }
         
@@ -206,26 +221,32 @@ public class ToolButton extends View {
         final int HIGHLIGHT_STROKE_COLOR_ALT = 0xFFC0C0C0;
         
         @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            final Resources res = getResources();
+            mTransparentTile = res.getDrawable(R.drawable.transparent_tool);
+        }
+        
+        @Override
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            if (mPaint == null) return;
+
             int p = this.getPaddingLeft();
             if ((color & 0xFF000000) == 0) { // transparent
-                final Resources res = getResources();
-                final Drawable tile = res.getDrawable(R.drawable.transparent_tool);
-                tile.setBounds(canvas.getClipBounds());
-                tile.draw(canvas);
+                mTransparentTile.setBounds(canvas.getClipBounds());
+                mTransparentTile.draw(canvas);
             } else {
                 canvas.drawColor(color);
             }
             if (isSelected() || isPressed()) {
-                Paint paint = new Paint();
-                paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(p);
-                paint.setColor(color == HIGHLIGHT_STROKE_COLOR 
+                mPaint.setStyle(Paint.Style.STROKE);
+                mPaint.setStrokeWidth(p);
+                mPaint.setColor(color == HIGHLIGHT_STROKE_COLOR 
                         ? HIGHLIGHT_STROKE_COLOR_ALT 
                         : HIGHLIGHT_STROKE_COLOR);
                 p /= 2;
-                canvas.drawRect(p, p, getWidth()-p, getHeight()-p, paint);
+                canvas.drawRect(p, p, getWidth()-p, getHeight()-p, mPaint);
             }
         }
     }
@@ -320,8 +341,6 @@ public class ToolButton extends View {
     
     @Override
     protected void onDraw(Canvas canvas) {
-        final Resources res = getResources();
-        ColorStateList bg = res.getColorStateList(R.color.pentool_bg);
-        canvas.drawColor(bg.getColorForState(getDrawableState(), bg.getDefaultColor()));
+        canvas.drawColor(mBgColor.getColorForState(getDrawableState(), mBgColor.getDefaultColor()));
     }
 }
