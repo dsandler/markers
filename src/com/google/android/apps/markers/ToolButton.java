@@ -26,6 +26,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -129,6 +130,7 @@ public class ToolButton extends View {
     public static class PenTypeButton extends ToolButton {
         public int penType;
         public Bitmap icon;
+        public Rect frame;
 
         public PenTypeButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
@@ -150,6 +152,10 @@ public class ToolButton extends View {
             super.onAttachedToWindow();
             if (penType == Slate.TYPE_AIRBRUSH) {
                 icon = BitmapFactory.decodeResource(getResources(), R.drawable.airbrush_dark);
+                if (icon == null) {
+                    throw new RuntimeException("PenTypeButton: could not load airbrush bitmap");
+                }
+                frame = new Rect(0, 0, icon.getWidth(), icon.getHeight());
             }
         }
         
@@ -186,7 +192,7 @@ public class ToolButton extends View {
             } else if (penType == Slate.TYPE_AIRBRUSH) {
                 mPaint.setAlpha(0xFF);
                 if (icon != null) {
-                    canvas.drawBitmap(icon, null, tmpRF, mPaint);
+                    canvas.drawBitmap(icon, frame, tmpRF, mPaint);
                 }
             }
         }

@@ -193,13 +193,19 @@ public class Slate extends View {
         private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         
         private Bitmap mCircleBits;
+        private Rect mCircleBitsFrame;
         private Bitmap mAirbrushBits;
+        private Rect mAirbrushBitsFrame;
         
         int mInkDensity = 0xff; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
         
         public SmoothStroker(Context context) {
             mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
+            if (mCircleBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load circle bitmap"); }
+            mCircleBitsFrame = new Rect(0, 0, mCircleBits.getWidth(), mCircleBits.getHeight());
             mAirbrushBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_light);
+            if (mAirbrushBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load airbrush bitmap"); }
+            mAirbrushBitsFrame = new Rect(0, 0, mAirbrushBits.getWidth(), mAirbrushBits.getHeight());
         }
 
         public void setPenColor(int color) {
@@ -269,11 +275,17 @@ public class Slate extends View {
                 break;
             case SHAPE_BITMAP_CIRCLE:
                 tmpRF.set(x-r,y-r,x+r,y+r);
-                c.drawBitmap(mCircleBits, null, tmpRF, mPaint);
+                if (mCircleBits == null || mCircleBitsFrame == null) {
+                    throw new RuntimeException("Slate.drawStrokePoint: no circle bitmap - frame=" + mCircleBitsFrame);
+                }
+                c.drawBitmap(mCircleBits, mCircleBitsFrame, tmpRF, mPaint);
                 break;
             case SHAPE_BITMAP_AIRBRUSH:
                 tmpRF.set(x-r,y-r,x+r,y+r);
-                c.drawBitmap(mAirbrushBits, null, tmpRF, mPaint);
+                if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
+                    throw new RuntimeException("Slate.drawStrokePoint: no circle bitmap - frame=" + mAirbrushBitsFrame);
+                }
+                c.drawBitmap(mAirbrushBits, mAirbrushBitsFrame, tmpRF, mPaint);
                 break;
             case SHAPE_CIRCLE:
             default:
@@ -461,7 +473,12 @@ public class Slate extends View {
         final float FIRM_PRESSURE_HIGH = 1.25f;
         
         if (mStrokeDebugGraph == null) {
-            mStrokeDebugGraph = Bitmap.createBitmap(c.getWidth() - 128, ROW_HEIGHT * mStrokes.length + 2 * ROW_MARGIN, Bitmap.Config.ARGB_8888);
+            final int width = c.getWidth() - 128;
+            final int height = ROW_HEIGHT * mStrokes.length + 2 * ROW_MARGIN;
+            mStrokeDebugGraph = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            if (mStrokeDebugGraph == null) {
+                throw new RuntimeException("drawStrokeDebugInfo: couldn't create debug bitmap (" + width + "x" + height + ")");
+            }
             mGraphPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
         }
         
@@ -582,6 +599,9 @@ public class Slate extends View {
         int newW = b.getWidth();
         int newH = b.getHeight();
         Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
+        if (newBitmap == null) {
+            throw new RuntimeException("setBitmap: Unable to allocate main buffer (" + newW + "x" + newH + ")");
+        }
         Canvas newCanvas = new Canvas();
         newCanvas.setBitmap(newBitmap);
         if (DEBUG) { 
@@ -595,6 +615,9 @@ public class Slate extends View {
 
         if (mPreviousBitmap != null && !mPreviousBitmap.isRecycled()) mPreviousBitmap.recycle();
         mPreviousBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
+        if (mPreviousBitmap == null) {
+            throw new RuntimeException("setBitmap: Unable to allocate undo buffer (" + newW + "x" + newH + ")");
+        }
         mPreviousCanvas = new Canvas();
         mPreviousCanvas.setBitmap(mPreviousBitmap);
 
@@ -626,10 +649,16 @@ public class Slate extends View {
         if (mCurrentBitmap != null) return;
         
         mCurrentBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        if (mCurrentBitmap == null) {
+            throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
+        }
         mCurrentCanvas = new Canvas();
         mCurrentCanvas.setBitmap(mCurrentBitmap);
 
         mPreviousBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        if (mCurrentBitmap == null) {
+            throw new RuntimeException("onSizeChanged: Unable to allocate undo buffer (" + w + "x" + h + ")");
+        }
         mPreviousCanvas = new Canvas();
         mPreviousCanvas.setBitmap(mPreviousBitmap);
 
