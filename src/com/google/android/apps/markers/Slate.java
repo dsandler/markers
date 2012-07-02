@@ -404,12 +404,13 @@ public class Slate extends View {
 
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
-        if (lowMem) {
+        if (true||lowMem) { // let's see how this works in practice
             opts.inSampleSize = 4;
         }
         mAirbrushBits = BitmapFactory.decodeResource(res, R.drawable.airbrush_light, opts);
         if (mAirbrushBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load airbrush bitmap"); }
         mAirbrushBitsFrame = new Rect(0, 0, mAirbrushBits.getWidth(), mAirbrushBits.getHeight());
+        //Log.v(TAG, "airbrush: " + mAirbrushBitsFrame.right + "x" + mAirbrushBitsFrame.bottom);
 
         // set up individual strokers for each pointer
         mStrokes = new MarkersPlotter[MAX_POINTERS]; // TODO: don't bother unless hasSystemFeature(MULTITOUCH_DISTINCT)
