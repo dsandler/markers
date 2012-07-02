@@ -18,7 +18,9 @@ package com.google.android.apps.markers;
 
 import java.util.ArrayList;
 
+import android.app.ActivityManager;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -90,6 +92,11 @@ public class Slate extends View {
     
     private Bitmap mPendingPaintBitmap;
     
+    private Bitmap mCircleBits;
+    private Rect mCircleBitsFrame;
+    private Bitmap mAirbrushBits;
+    private Rect mAirbrushBitsFrame;
+        
     private PressureCooker mPressureCooker;
     
     private boolean mEmpty;
@@ -114,7 +121,7 @@ public class Slate extends View {
         
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
-            mRenderer = new SmoothStroker(getContext());
+            mRenderer = new SmoothStroker();
         }
 
 //        final Rect tmpDirtyRect = new Rect();
@@ -176,7 +183,7 @@ public class Slate extends View {
         }
     }
     
-    private static class SmoothStroker {
+    private class SmoothStroker {
         // The renderer. Given a stream of filtered points, converts it into draw calls.
         
         private float mLastX = 0, mLastY = 0, mLastLen = 0, mLastR = -1;
@@ -192,20 +199,9 @@ public class Slate extends View {
         
         private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         
-        private Bitmap mCircleBits;
-        private Rect mCircleBitsFrame;
-        private Bitmap mAirbrushBits;
-        private Rect mAirbrushBitsFrame;
-        
         int mInkDensity = 0xff; // set to 0x20 or so for a felt-tip look, 0xff for traditional Markers
         
-        public SmoothStroker(Context context) {
-            mCircleBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.circle_1bpp);
-            if (mCircleBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load circle bitmap"); }
-            mCircleBitsFrame = new Rect(0, 0, mCircleBits.getWidth(), mCircleBits.getHeight());
-            mAirbrushBits = BitmapFactory.decodeResource(context.getResources(), R.drawable.airbrush_light);
-            if (mAirbrushBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load airbrush bitmap"); }
-            mAirbrushBitsFrame = new Rect(0, 0, mAirbrushBits.getWidth(), mAirbrushBits.getHeight());
+        public SmoothStroker() {
         }
 
         public void setPenColor(int color) {
@@ -261,13 +257,13 @@ public class Slate extends View {
             mLastR = -1;
         }
 
-        static float dist (float x1, float y1, float x2, float y2) {
+        final float dist (float x1, float y1, float x2, float y2) {
             x2-=x1;
             y2-=y1;
             return (float) Math.sqrt(x2*x2 + y2*y2);
         }
         
-        private RectF tmpRF = new RectF();
+        private final RectF tmpRF = new RectF();
         final void drawStrokePoint(Canvas c, float x, float y, float r, RectF dirty) {
             switch (mShape) {
             case SHAPE_SQUARE:
@@ -295,7 +291,7 @@ public class Slate extends View {
             dirty.union(x-r, y-r, x+r, y+r);
         }
         
-        final static RectF tmpDirtyRectF = new RectF();
+        private final RectF tmpDirtyRectF = new RectF();
         public RectF strokeTo(Canvas c, float x, float y, float r) {
             final RectF dirty = tmpDirtyRectF;
             dirty.setEmpty();
@@ -365,7 +361,7 @@ public class Slate extends View {
         }
     }
 
-    private MarkersPlotter[] mStrokes = new MarkersPlotter[MAX_POINTERS];
+    private MarkersPlotter[] mStrokes;
 
     Spot mTmpSpot = new Spot();
     
@@ -386,7 +382,37 @@ public class Slate extends View {
 //        setDrawingCacheEnabled(false);
         
         mEmpty = true;
-        
+
+        // setup brush bitmaps
+        final int memClass;
+        final ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            memClass = am.getLargeMemoryClass();
+        } else {
+            memClass = am.getMemoryClass();
+        }
+        final boolean lowMem = (memClass <= 16);
+        if (DEBUG) {
+            Log.v(TAG, "Slate.init: memClass=" + memClass + (lowMem ? " LOW" : ""));
+        }
+
+        final Resources res = getContext().getResources();
+
+        mCircleBits = BitmapFactory.decodeResource(res, R.drawable.circle_1bpp);
+        if (mCircleBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load circle bitmap"); }
+        mCircleBitsFrame = new Rect(0, 0, mCircleBits.getWidth(), mCircleBits.getHeight());
+
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
+        if (lowMem) {
+            opts.inSampleSize = 4;
+        }
+        mAirbrushBits = BitmapFactory.decodeResource(res, R.drawable.airbrush_light, opts);
+        if (mAirbrushBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load airbrush bitmap"); }
+        mAirbrushBitsFrame = new Rect(0, 0, mAirbrushBits.getWidth(), mAirbrushBits.getHeight());
+
+        // set up individual strokers for each pointer
+        mStrokes = new MarkersPlotter[MAX_POINTERS]; // TODO: don't bother unless hasSystemFeature(MULTITOUCH_DISTINCT)
         for (int i=0; i<mStrokes.length; i++) {
             mStrokes[i] = new MarkersPlotter();
         }
