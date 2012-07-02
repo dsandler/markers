@@ -76,7 +76,7 @@ public class Slate extends View {
     
     public static final int SHAPE_CIRCLE = 0;
     public static final int SHAPE_SQUARE = 1;
-    public static final int SHAPE_BITMAP_CIRCLE = 2;
+//    public static final int SHAPE_BITMAP_CIRCLE = 2;
     public static final int SHAPE_BITMAP_AIRBRUSH = 3;
 
     private float mPressureExponent = 2.0f;
@@ -92,8 +92,8 @@ public class Slate extends View {
     
     private Bitmap mPendingPaintBitmap;
     
-    private Bitmap mCircleBits;
-    private Rect mCircleBitsFrame;
+//    private Bitmap mCircleBits;
+//    private Rect mCircleBitsFrame;
     private Bitmap mAirbrushBits;
     private Rect mAirbrushBitsFrame;
         
@@ -269,13 +269,13 @@ public class Slate extends View {
             case SHAPE_SQUARE:
                 c.drawRect(x-r,y-r,x+r,y+r, mPaint);
                 break;
-            case SHAPE_BITMAP_CIRCLE:
-                tmpRF.set(x-r,y-r,x+r,y+r);
-                if (mCircleBits == null || mCircleBitsFrame == null) {
-                    throw new RuntimeException("Slate.drawStrokePoint: no circle bitmap - frame=" + mCircleBitsFrame);
-                }
-                c.drawBitmap(mCircleBits, mCircleBitsFrame, tmpRF, mPaint);
-                break;
+//            case SHAPE_BITMAP_CIRCLE:
+//                tmpRF.set(x-r,y-r,x+r,y+r);
+//                if (mCircleBits == null || mCircleBitsFrame == null) {
+//                    throw new RuntimeException("Slate.drawStrokePoint: no circle bitmap - frame=" + mCircleBitsFrame);
+//                }
+//                c.drawBitmap(mCircleBits, mCircleBitsFrame, tmpRF, mPaint);
+//                break;
             case SHAPE_BITMAP_AIRBRUSH:
                 tmpRF.set(x-r,y-r,x+r,y+r);
                 if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
@@ -398,9 +398,9 @@ public class Slate extends View {
 
         final Resources res = getContext().getResources();
 
-        mCircleBits = BitmapFactory.decodeResource(res, R.drawable.circle_1bpp);
-        if (mCircleBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load circle bitmap"); }
-        mCircleBitsFrame = new Rect(0, 0, mCircleBits.getWidth(), mCircleBits.getHeight());
+//        mCircleBits = BitmapFactory.decodeResource(res, R.drawable.circle_1bpp);
+//        if (mCircleBits == null) { Log.e(TAG, "SmoothStroker: Couldn't load circle bitmap"); }
+//        mCircleBitsFrame = new Rect(0, 0, mCircleBits.getWidth(), mCircleBits.getHeight());
 
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
