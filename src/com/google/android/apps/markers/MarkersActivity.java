@@ -17,9 +17,12 @@
 package com.google.android.apps.markers;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.LinkedList;
+import java.util.List;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -37,6 +40,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.media.MediaScannerConnection;
+import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -68,7 +72,7 @@ public class MarkersActivity extends Activity
     final static int LOAD_IMAGE = 1000;
 
     private static final String TAG = "Markers";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
     public static final String IMAGE_TEMP_DIRNAME = IMAGE_SAVE_DIRNAME + "/.temporary";
@@ -90,6 +94,45 @@ public class MarkersActivity extends Activity
     private View mComboHudView;
     
     private Dialog mMenuDialog;
+
+    private LinkedList<String> mDrawingsToScan = new LinkedList<String>();
+
+    protected MediaScannerConnection mMediaScannerConnection;
+    private String mPendingShareFile;
+    private MediaScannerConnectionClient mMediaScannerClient = 
+            new MediaScannerConnection.MediaScannerConnectionClient() {
+                @Override
+                public void onMediaScannerConnected() {
+                    if (DEBUG) Log.v(TAG, "media scanner connected");
+                    scanNext();
+                }
+                
+                private void scanNext() {
+                    synchronized (mDrawingsToScan) {
+                        if (mDrawingsToScan.isEmpty()) {
+                            mMediaScannerConnection.disconnect();
+                            return;
+                        }
+                        String fn = mDrawingsToScan.pop();
+                        mMediaScannerConnection.scanFile(fn, "image/png");
+                    }
+                }
+        
+                @Override
+                public void onScanCompleted(String path, Uri uri) {
+                    if (DEBUG) Log.v(TAG, "File scanned: " + path);
+                    synchronized (mDrawingsToScan) {
+                        if (path.equals(mPendingShareFile)) {
+                            Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                            sendIntent.setType("image/png");
+                            sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                            startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
+                            mPendingShareFile = null;
+                        }
+                        scanNext();
+                    }
+                }
+            };
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -158,6 +201,10 @@ public class MarkersActivity extends Activity
         }
         final ViewGroup root = ((ViewGroup)findViewById(R.id.root));
         root.addView(mSlate, 0);
+        
+        mMediaScannerConnection =
+                new MediaScannerConnection(MarkersActivity.this, mMediaScannerClient); 
+
         
         if (icicle != null) {
             onRestoreInstanceState(icicle);
@@ -515,7 +562,10 @@ public class MarkersActivity extends Activity
                     if (!d.exists()) {
                         if (d.mkdirs()) {
                             if (_temporary) {
-                                new FileOutputStream(new File(d, ".nomedia")).write('\n');
+                                final File noMediaFile = new File(d, MediaStore.MEDIA_IGNORE_FILENAME);
+                                if (!noMediaFile.exists()) {
+                                    new FileOutputStream(noMediaFile).write('\n');
+                                }
                             }
                         } else {
                             throw new IOException("cannot create dirs: " + d);
@@ -537,21 +587,19 @@ public class MarkersActivity extends Activity
             
             @Override
             protected void onPostExecute(String fn) {
-                if (_share && fn != null) {
-                    Uri streamUri = Uri.fromFile(new File(fn));
-                    Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                    sendIntent.setType("image/jpeg");
-                    sendIntent.putExtra(Intent.EXTRA_STREAM, streamUri);
-                    startActivity(Intent.createChooser(sendIntent, "Send drawing to:"));
+                if (fn != null) {
+                    synchronized(mDrawingsToScan) {
+                        mDrawingsToScan.add(fn);
+                        if (_share) {
+                            mPendingShareFile = fn;
+                        }
+                        if (!mMediaScannerConnection.isConnected()) {
+                            mMediaScannerConnection.connect(); // will scan the files and share them
+                        }
+                    }
                 }
-                
+
                 if (_clear) mSlate.clear();
-                
-                if (!_temporary) {
-                    MediaScannerConnection.scanFile(MarkersActivity.this,
-                            new String[] { fn }, null, null
-                            );
-                }
             }
         }.execute();
         
@@ -561,8 +609,9 @@ public class MarkersActivity extends Activity
         if (mSlate.isEmpty()) return;
         
         v.setEnabled(false);
-        saveDrawing(System.currentTimeMillis() + ".png");
-        Toast.makeText(this, "Drawing saved.", Toast.LENGTH_SHORT).show();
+        final String filename = System.currentTimeMillis() + ".png"; 
+        saveDrawing(filename);
+        Toast.makeText(this, "Drawing saved: " + filename, Toast.LENGTH_SHORT).show();
         v.setEnabled(true);
     }
 
@@ -570,9 +619,10 @@ public class MarkersActivity extends Activity
         if (mSlate.isEmpty()) return;
 
         v.setEnabled(false);
-        saveDrawing(System.currentTimeMillis() + ".png", 
+        final String filename = System.currentTimeMillis() + ".png"; 
+        saveDrawing(filename, 
                 /*temporary=*/ false, /*animate=*/ true, /*share=*/ false, /*clear=*/ true);
-        Toast.makeText(this, "Drawing saved.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Drawing saved: " + filename, Toast.LENGTH_SHORT).show();
         v.setEnabled(true);
     }
 
@@ -585,7 +635,12 @@ public class MarkersActivity extends Activity
     public void clickShare(View v) {
         hideOverflow();
         setThingyEnabled(v, false);
-        saveDrawing("from_markers.png", /*temporary=*/ true, /*animate=*/ false, /*share=*/ true, /*clear=*/ false);
+        final String filename = System.currentTimeMillis() + ".png";
+        // can't use a truly temporary file because:
+        // - we want mediascanner to give us a content: URI for it; some apps don't like file: URIs
+        // - if mediascanner scans it, it will show up in Gallery, so it might as well be a regular drawing
+        saveDrawing(filename,
+                /*temporary=*/ false, /*animate=*/ false, /*share=*/ true, /*clear=*/ false);
         setThingyEnabled(v, true);
     }
 
@@ -649,7 +704,7 @@ public class MarkersActivity extends Activity
         mMenuDialog.show();
     }
     private void hideOverflow() {
-        mMenuDialog.hide();
+        mMenuDialog.dismiss();
     }
     public void clickOverflow(View v) {
         if (mMenuDialog == null) {
