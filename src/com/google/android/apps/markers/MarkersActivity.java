@@ -257,6 +257,11 @@ public class MarkersActivity extends Activity
             typeAirbrushButton.setCallback(toolCB);
         }
         
+        final ToolButton typeFountainPenButton = (ToolButton) findViewById(R.id.fountainpen_marker);
+        if (typeFountainPenButton != null) {
+            typeFountainPenButton.setCallback(toolCB);
+        }
+        
         mLastPenType = mActivePenType = typeWhiteboardButton;
         mActivePenType.click();
 

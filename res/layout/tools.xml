@@ -80,7 +80,7 @@
            android:id="@+id/whiteboard_marker"
            android:layout_width="match_parent"
            android:layout_height="match_parent"
-           android:padding="6dp"
+           android:padding="3dp"
            android:layout_weight="1"
            markers:penType="whiteboard"
            />
@@ -89,7 +89,7 @@
            android:id="@+id/felttip_marker"
            android:layout_width="match_parent"
            android:layout_height="match_parent"
-           android:padding="6dp"
+           android:padding="3dp"
            android:layout_weight="1"
            markers:penType="feltTip"
            />
@@ -98,9 +98,18 @@
            android:id="@+id/airbrush_marker"
            android:layout_width="match_parent"
            android:layout_height="match_parent"
-           android:padding="4dp"
+           android:padding="1dp"
            android:layout_weight="1"
            markers:penType="airbrush"
+           />
+	    <view
+           class="com.google.android.apps.markers.ToolButton$PenTypeButton"
+           android:id="@+id/fountainpen_marker"
+           android:layout_width="match_parent"
+           android:layout_height="match_parent"
+           android:padding="2dp"
+           android:layout_weight="1"
+           markers:penType="fountainpen"
            />
     </LinearLayout>
 </LinearLayout>

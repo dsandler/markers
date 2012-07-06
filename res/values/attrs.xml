@@ -28,6 +28,7 @@
 	        <enum name="whiteboard" value="0" />
 	        <enum name="feltTip" value="1" />
 	        <enum name="airbrush" value="2" />
+	        <enum name="fountainpen" value="3" />
         </attr>
     </declare-styleable>
 </resources>

@@ -156,6 +156,12 @@ public class ToolButton extends View {
                     throw new RuntimeException("PenTypeButton: could not load airbrush bitmap");
                 }
                 frame = new Rect(0, 0, icon.getWidth(), icon.getHeight());
+            } else if (penType == Slate.TYPE_FOUNTAIN_PEN) {
+                icon = BitmapFactory.decodeResource(getResources(), R.drawable.fountainpen);
+                if (icon == null) {
+                    throw new RuntimeException("PenTypeButton: could not load fountainpen bitmap");
+                }
+                frame = new Rect(0, 0, icon.getWidth(), icon.getHeight());
             }
         }
         
@@ -183,17 +189,23 @@ public class ToolButton extends View {
             mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
             tmpRF.set(x-r,y-r,x+r,y+r);
 
-            if (penType == Slate.TYPE_WHITEBOARD) {
-                mPaint.setAlpha(0xFF);
-                canvas.drawCircle(x, y, r, mPaint);
-            } else if (penType == Slate.TYPE_FELTTIP) {
-                mPaint.setAlpha(0x80);
-                canvas.drawCircle(x, y, r, mPaint);
-            } else if (penType == Slate.TYPE_AIRBRUSH) {
-                mPaint.setAlpha(0xFF);
-                if (icon != null) {
-                    canvas.drawBitmap(icon, frame, tmpRF, mPaint);
-                }
+            switch (penType) {
+                case Slate.TYPE_FELTTIP:
+                    mPaint.setAlpha(0x80);
+                    canvas.drawCircle(x, y, r, mPaint);
+                    break;
+                case Slate.TYPE_AIRBRUSH:
+                case Slate.TYPE_FOUNTAIN_PEN:
+                    mPaint.setAlpha(0xFF);
+                    if (icon != null) {
+                        canvas.drawBitmap(icon, frame, tmpRF, mPaint);
+                    }
+                    break;
+                case Slate.TYPE_WHITEBOARD:
+                default:
+                    mPaint.setAlpha(0xFF);
+                    canvas.drawCircle(x, y, r, mPaint);
+                    break;
             }
         }
     }
