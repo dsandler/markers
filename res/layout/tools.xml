@@ -71,7 +71,7 @@
 	<LinearLayout
 	    android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="128dp"
         android:layout_weight="0"
         android:layout_marginTop="@dimen/tool_palette_gutter"
 	    >
