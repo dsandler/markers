@@ -59,8 +59,6 @@ public class Slate extends View {
     
     public static final int MAX_POINTERS = 10;
 
-    private static final float WALK_STEP_PX = 1.0f; // 3.0f;
-
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
     private static final float SMOOTHING_FILTER_PRESSURE_DECAY = 0.9f;
@@ -240,11 +238,11 @@ public class Slate extends View {
                 break;
             case TYPE_FELTTIP:
                 mShape = SHAPE_CIRCLE;
-                mInkDensity = 0x15;
+                mInkDensity = 0x10;
                 break;
             case TYPE_AIRBRUSH:
                 mShape = SHAPE_BITMAP_AIRBRUSH;
-                mInkDensity = 0xff;
+                mInkDensity = 0x80;
                 break;
             case TYPE_FOUNTAIN_PEN:
                 mShape = SHAPE_FOUNTAIN_PEN;
@@ -331,7 +329,15 @@ public class Slate extends View {
                     yi = lerp(mLastY, y, frac);
                     drawStrokePoint(c,xi,yi,ri,dirty);
 
-                    d += Math.min(ri, WALK_STEP_PX); // for very narrow lines we must step one radius at a time
+                    // for very narrow lines we must step (not much more than) one radius at a time
+                    final float MIN = 1f;
+                    final float THRESH = 16f;
+                    final float SLOPE = 0.1f; // asymptote: the spacing will increase as SLOPE*x
+                    if (ri <= THRESH) {
+                        d += MIN;
+                    } else {
+                        d += Math.sqrt(SLOPE * Math.pow(ri - THRESH, 2) + MIN);
+                    }
                 }
                 
                 /* 
