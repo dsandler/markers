@@ -113,7 +113,7 @@ public class MarkersActivity extends Activity
                             mMediaScannerConnection.disconnect();
                             return;
                         }
-                        String fn = mDrawingsToScan.pop();
+                        String fn = mDrawingsToScan.removeFirst();
                         mMediaScannerConnection.scanFile(fn, "image/png");
                     }
                 }
