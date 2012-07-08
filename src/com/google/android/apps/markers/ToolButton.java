@@ -31,8 +31,12 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.accessibility.AccessibilityEvent;
 
 import org.dsandler.apps.markers.R;
 
@@ -41,6 +45,7 @@ public class ToolButton extends View {
         public void setZoomMode(ToolButton me) {}
         public void setPenMode(ToolButton me, float min, float max) {}
         public void setPenColor(ToolButton me, int color) {}
+        public void setBackgroundColor(ToolButton me, int color) {}
         public void restore(ToolButton me) {}
         public void setPenType(ToolButton penTypeButton, int penType) {}
     }
@@ -55,7 +60,22 @@ public class ToolButton extends View {
     
     protected Paint mPaint;
     protected ColorStateList mFgColor, mBgColor;
-    
+
+    private Runnable mLongPressHandler = new Runnable() {
+        @Override
+        public void run() {
+            if (Slate.DEBUG) {
+                Log.d(Slate.TAG, "longpress on " + ToolButton.this + " pressed=" + isPressed());
+            }
+            if (isPressed()) {
+                if (onLongClick(ToolButton.this)) {
+                    deactivate();
+                    invalidate();
+                }
+            }
+        }
+    };
+
     public ToolButton(Context context) {
         super(context);
     }
@@ -125,6 +145,11 @@ public class ToolButton extends View {
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
         }
+    }
+
+    protected boolean onLongClick(View v) {
+        // do nothing
+        return false;
     }
 
     public static class PenTypeButton extends ToolButton {
@@ -267,6 +292,13 @@ public class ToolButton extends View {
                 canvas.drawRect(p, p, getWidth()-p, getHeight()-p, mPaint);
             }
         }
+
+        @Override
+        protected boolean onLongClick(View v) {
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.setBackgroundColor(this, color);
+            return true;
+        }
     }
 
     public static class ZoomToolButton extends ToolButton {
@@ -325,33 +357,24 @@ public class ToolButton extends View {
         
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                if (!isSelected()) {
-                    mDownTime = event.getEventTime();
-                    setPressed(true);
-                    activate();
-                    invalidate();
-                }
-                if (PERMANENT_TOOL_SWITCH_THRESHOLD > 0 
-                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                    return true;
-                } else {
-                    // FALL THROUGH.
-                    // Split touch events only appeared in Honeycomb; before this we
-                    // want to simply switch the tool on DOWN, end of story.
-                }
+                if (Slate.DEBUG) Log.d(Slate.TAG, "DOWN on " + ToolButton.this + " lph=" + mLongPressHandler);
+                postDelayed(mLongPressHandler, ViewConfiguration.getLongPressTimeout());
+                mDownTime = event.getEventTime();
+                setPressed(true);
+                invalidate();
+                return true;
             case MotionEvent.ACTION_UP:
                 if (isPressed()) {
-                    setPressed(false);
-                    if (PERMANENT_TOOL_SWITCH_THRESHOLD > 0
-                            && event.getEventTime() - mDownTime > PERMANENT_TOOL_SWITCH_THRESHOLD) {
-                        deactivate();
-                        final ToolCallback cb = mCallback;
-                        if (cb != null) cb.restore(this);
-                    } else {
+                    if (!isSelected()) {
+                        activate();
                         commit();
                     }
                     invalidate();
                 }
+                removeCallbacks(mLongPressHandler);
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+                removeCallbacks(mLongPressHandler);
                 return true;
         }
         return false;

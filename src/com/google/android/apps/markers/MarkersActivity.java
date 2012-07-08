@@ -256,6 +256,10 @@ public class MarkersActivity extends Activity
                 if (tool == mActiveTool && tool != mLastTool) mLastTool.click();
                 else if (tool == mActiveColor && tool != mLastColor) mLastColor.click();
             }
+            @Override
+            public void setBackgroundColor(ToolButton tool, int color) {
+                mSlate.setDrawingBackground(color);
+            }
         };
         
         descend((ViewGroup) mColorsView, new ViewFunc() {
@@ -537,12 +541,8 @@ public class MarkersActivity extends Activity
     }
 
     public void saveDrawing(String filename, boolean temporary, boolean animate, boolean share, boolean clear) {
-        final Bitmap localBits;
-        final Bitmap currentBuffer = mSlate.getBitmap();
-        if (currentBuffer != null) {
-            // clone bitmap to keep it safe
-            localBits = currentBuffer.copy(currentBuffer.getConfig(), false);
-        } else {
+        final Bitmap localBits = mSlate.copyBitmap(/*withBackground=*/!temporary);
+        if (localBits == null) {
             if (DEBUG) Log.e(TAG, "save: null bitmap");
             return;
         }

@@ -516,6 +516,8 @@ public class Slate extends View {
     private Bitmap mStrokeDebugGraph;
     private int mGraphX = 0;
     private Paint mGraphPaint1;
+    private int mBackgroundColor = Color.TRANSPARENT;
+
     private void drawStrokeDebugInfo(Canvas c) {
         final int ROW_HEIGHT = 24;
         final int ROW_MARGIN = 6;
@@ -640,9 +642,28 @@ public class Slate extends View {
             mCurrentCanvas.toString()));
     }
 
+    public void setDrawingBackground(int color) {
+        mBackgroundColor  = color;
+        setBackgroundColor(color);
+        invalidate();
+    }
+
     public Bitmap getBitmap() {
         commitStroke();
         return mPreviousBitmap;
+    }
+
+    public Bitmap copyBitmap(boolean withBackground) {
+        Bitmap b = getBitmap();
+        Bitmap newb = Bitmap.createBitmap(b.getWidth(), b.getHeight(), b.getConfig());
+        if (newb != null) {
+            Canvas newc = new Canvas(newb);
+            if (mBackgroundColor != Color.TRANSPARENT && withBackground) {
+                newc.drawColor(mBackgroundColor);
+            }
+            newc.drawBitmap(b, 0, 0, null);
+        }
+        return newb;
     }
 
     public void setBitmap(Bitmap b) {
