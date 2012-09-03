@@ -511,8 +511,19 @@ public class MarkersActivity extends Activity
     public boolean loadDrawing(String filename) {
         return loadDrawing(filename, false);
     }
+
+    public File getPicturesDirectory() {
+        final File d;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO) {
+            d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        } else {
+            d = new File("/sdcard/Pictures");
+        }
+        return d;
+    }
+
     public boolean loadDrawing(String filename, boolean temporary) {
-        File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        File d = getPicturesDirectory();
         d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
         final String filePath = new File(d, filename).toString();
         if (DEBUG) Log.d(TAG, "loadDrawing: " + filePath);
@@ -557,7 +568,7 @@ public class MarkersActivity extends Activity
             protected String doInBackground(Void... params) {
                 String fn = null;
                 try {
-                    File d = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                    File d = getPicturesDirectory();
                     d = new File(d, _temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
                     if (!d.exists()) {
                         if (d.mkdirs()) {
