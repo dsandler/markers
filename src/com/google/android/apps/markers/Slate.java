@@ -18,6 +18,7 @@ package com.google.android.apps.markers;
 
 import java.util.ArrayList;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.res.Resources;
@@ -50,7 +51,8 @@ public class Slate extends View {
     
     public static final boolean HWLAYER = true;
     public static final boolean SWLAYER = false;
-    public static final boolean FANCY_INVALIDATES = false;
+    public static final boolean FANCY_INVALIDATES = false; // doesn't work
+    public static final boolean INVALIDATE_ALL_THE_THINGS = false; // invalidate() every frame
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
@@ -58,6 +60,8 @@ public class Slate extends View {
     public static final int FLAG_DEBUG_EVERYTHING = ~0;
     
     public static final int MAX_POINTERS = 10;
+
+    public static final int TILE_SIZE = 256;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
@@ -87,8 +91,7 @@ public class Slate extends View {
 
     int mDebugFlags = 0;
 
-    private Bitmap mPreviousBitmap, mCurrentBitmap;
-    private Canvas mPreviousCanvas, mCurrentCanvas;
+    private TiledBitmapCanvas mPreviousCanvas, mCurrentCanvas;
     private final Paint mDebugPaints[] = new Paint[10];
     
     private Bitmap mPendingPaintBitmap;
@@ -271,7 +274,7 @@ public class Slate extends View {
         }
         
         private final RectF tmpRF = new RectF();
-        final void drawStrokePoint(Canvas c, float x, float y, float r, RectF dirty) {
+        final void drawStrokePoint(CanvasLite c, float x, float y, float r, RectF dirty) {
             switch (mShape) {
             case SHAPE_SQUARE:
                 c.drawRect(x-r,y-r,x+r,y+r, mPaint);
@@ -284,19 +287,19 @@ public class Slate extends View {
 //                c.drawBitmap(mCircleBits, mCircleBitsFrame, tmpRF, mPaint);
 //                break;
             case SHAPE_BITMAP_AIRBRUSH:
-                tmpRF.set(x-r,y-r,x+r,y+r);
-                if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
-                    throw new RuntimeException("Slate.drawStrokePoint: no airbrush bitmap - frame=" + mAirbrushBitsFrame);
-                }
-                c.drawBitmap(mAirbrushBits, mAirbrushBitsFrame, tmpRF, mPaint);
-                break;
+//                tmpRF.set(x-r,y-r,x+r,y+r);
+//                if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
+//                    throw new RuntimeException("Slate.drawStrokePoint: no airbrush bitmap - frame=" + mAirbrushBitsFrame);
+//                }
+//                c.drawBitmap(mAirbrushBits, mAirbrushBitsFrame, tmpRF, mPaint);
+//                break;
             case SHAPE_FOUNTAIN_PEN:
-                tmpRF.set(x-r,y-r,x+r,y+r);
-                if (mFountainPenBits == null || mFountainPenBitsFrame == null) {
-                    throw new RuntimeException("Slate.drawStrokePoint: no fountainpen bitmap - frame=" + mFountainPenBitsFrame);
-                }
-                c.drawBitmap(mFountainPenBits, mFountainPenBitsFrame, tmpRF, mPaint);
-                break;
+//                tmpRF.set(x-r,y-r,x+r,y+r);
+//                if (mFountainPenBits == null || mFountainPenBitsFrame == null) {
+//                    throw new RuntimeException("Slate.drawStrokePoint: no fountainpen bitmap - frame=" + mFountainPenBitsFrame);
+//                }
+//                c.drawBitmap(mFountainPenBits, mFountainPenBitsFrame, tmpRF, mPaint);
+//                break;
             case SHAPE_CIRCLE:
             default:
                 c.drawCircle(x, y, r, mPaint);
@@ -306,7 +309,7 @@ public class Slate extends View {
         }
         
         private final RectF tmpDirtyRectF = new RectF();
-        public RectF strokeTo(Canvas c, float x, float y, float r) {
+        public RectF strokeTo(CanvasLite c, float x, float y, float r) {
             final RectF dirty = tmpDirtyRectF;
             dirty.setEmpty();
             
@@ -399,6 +402,7 @@ public class Slate extends View {
     	init();
     }
     
+    @SuppressLint("NewApi")
     private void init() {
 //        setWillNotCacheDrawing(true);
 //        setDrawingCacheEnabled(false);
@@ -483,22 +487,22 @@ public class Slate extends View {
 
     public void recycle() {
     	// WARNING: the slate will not be usable until you call load() or clear() or something
-    	if (mPreviousBitmap != null) {
-	    	mPreviousBitmap.recycle(); 
-	    	mPreviousBitmap = null;
+    	if (mPreviousCanvas != null) {
+	    	mPreviousCanvas.recycleBitmaps(); 
+	    	mPreviousCanvas = null;
     	}
-    	if (mCurrentBitmap != null) {
-	    	mCurrentBitmap.recycle();
-	        mCurrentBitmap = null;
+    	if (mCurrentCanvas != null) {
+	    	mCurrentCanvas.recycleBitmaps();
+	        mCurrentCanvas = null;
     	}
     }
 
     public void clear() {
-        if (mCurrentBitmap != null) {
+        if (mCurrentCanvas != null) {
             commitStroke();
             mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
             invalidate();
-        } else if (mPendingPaintBitmap != null) {
+        } else if (mPendingPaintBitmap != null) { // FIXME for tiling
             mPendingPaintBitmap.recycle();
             mPendingPaintBitmap = null;
         }
@@ -590,56 +594,57 @@ public class Slate extends View {
 
     public void commitStroke() {
         if (mPreviousCanvas == null) return;
-
-        Canvas swapCanvas = mPreviousCanvas;
-        Bitmap swapBitmap = mPreviousBitmap;
-
-        mPreviousCanvas = mCurrentCanvas;
-        mPreviousBitmap = mCurrentBitmap;
-
-        swapCanvas.save();
-        swapCanvas.setMatrix(null);
-        swapCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-        if (DEBUG) { 
-            Log.v(TAG, "swapCanvas: drawing bitmap into new canvas");
-        }
-        swapCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
-        swapCanvas.restore();
-
-        mCurrentCanvas = swapCanvas;
-        mCurrentBitmap = swapBitmap;
+        // FIXME for tiling
+//
+//        TiledBitmapCanvas swapCanvas = mPreviousCanvas;
+//
+//        mPreviousCanvas = mCurrentCanvas;
+//
+//        swapCanvas.save();
+//        swapCanvas.setMatrix(null);
+//        swapCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
+//        if (DEBUG) { 
+//            Log.v(TAG, "swapCanvas: drawing bitmap into new canvas");
+//        }
+//        swapCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
+//        swapCanvas.restore();
+//
+//        mCurrentCanvas = swapCanvas;
+//        mCurrentBitmap = swapBitmap;
     }
 
     public void undo() {
         mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-        mCurrentCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
+        // FIXME for tiling
+        //mCurrentCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
 
         invalidate();
     }
 
     public void paintBitmap(Bitmap b) {
-        if (mCurrentBitmap == null) {
+        if (mCurrentCanvas == null) {
             mPendingPaintBitmap = b;
             return;
         }
 
         commitStroke();
-
-        Matrix m = new Matrix();
-        RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
-        RectF d = new RectF(0, 0, mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight());
-        m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
-        
-        if (DEBUG) { 
-            Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
-        }
-        mCurrentCanvas.drawBitmap(b, m, sBitmapPaint);
-        invalidate();
-
-        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) canvas=%s",
-            b.toString(), b.getWidth(), b.getHeight(),
-            mCurrentBitmap.toString(), mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight(),
-            mCurrentCanvas.toString()));
+        // FIXME for tiling
+//
+//        Matrix m = new Matrix();
+//        RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
+//        RectF d = new RectF(0, 0, mCurrentCanvas.getWidth(), mCurrentCanvas.getHeight());
+//        m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
+//        
+//        if (DEBUG) { 
+//            Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
+//        }
+//        mCurrentCanvas.drawBitmap(b, m, sBitmapPaint);
+//        invalidate();
+//
+//        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) canvas=%s",
+//            b.toString(), b.getWidth(), b.getHeight(),
+//            mCurrentBitmap.toString(), mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight(),
+//            mCurrentCanvas.toString()));
     }
 
     public void setDrawingBackground(int color) {
@@ -650,7 +655,8 @@ public class Slate extends View {
 
     public Bitmap getBitmap() {
         commitStroke();
-        return mPreviousBitmap;
+        // FIXME for tiling
+        return mCurrentCanvas.toBitmap();
     }
 
     public Bitmap copyBitmap(boolean withBackground) {
@@ -668,38 +674,44 @@ public class Slate extends View {
 
     public void setBitmap(Bitmap b) {
         if (b == null) return;
-
-        int newW = b.getWidth();
-        int newH = b.getHeight();
-        Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
-        if (newBitmap == null) {
-            throw new RuntimeException("setBitmap: Unable to allocate main buffer (" + newW + "x" + newH + ")");
-        }
-        Canvas newCanvas = new Canvas();
-        newCanvas.setBitmap(newBitmap);
-        if (DEBUG) { 
-            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
-        }
-        newCanvas.drawBitmap(b, 0, 0, null);
         
-        if (mCurrentBitmap != null && !mCurrentBitmap.isRecycled()) mCurrentBitmap.recycle();
-        mCurrentBitmap = newBitmap;
-        mCurrentCanvas = newCanvas;
-
-        if (mPreviousBitmap != null && !mPreviousBitmap.isRecycled()) mPreviousBitmap.recycle();
-        mPreviousBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
-        if (mPreviousBitmap == null) {
-            throw new RuntimeException("setBitmap: Unable to allocate undo buffer (" + newW + "x" + newH + ")");
-        }
-        mPreviousCanvas = new Canvas();
-        mPreviousCanvas.setBitmap(mPreviousBitmap);
-
-        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): bitmap=%s (%dx%d) mPreviousCanvas=%s",
-            b.toString(), b.getWidth(), b.getHeight(),
-            mPreviousBitmap.toString(), mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight(),
-            mPreviousCanvas.toString()));
-
+        mCurrentCanvas.recycleBitmaps();
+        mCurrentCanvas = new TiledBitmapCanvas(b);
         mEmpty = false;
+        
+        // XXX FIXME for tiling
+
+//        int newW = b.getWidth();
+//        int newH = b.getHeight();
+//        Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
+//        if (newBitmap == null) {
+//            throw new RuntimeException("setBitmap: Unable to allocate main buffer (" + newW + "x" + newH + ")");
+//        }
+//        Canvas newCanvas = new Canvas();
+//        newCanvas.setBitmap(newBitmap);
+//        if (DEBUG) { 
+//            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
+//        }
+//        newCanvas.drawBitmap(b, 0, 0, null);
+//        
+//        if (mCurrentBitmap != null && !mCurrentBitmap.isRecycled()) mCurrentBitmap.recycle();
+//        mCurrentBitmap = newBitmap;
+//        mCurrentCanvas = newCanvas;
+//
+//        if (mPreviousBitmap != null && !mPreviousBitmap.isRecycled()) mPreviousBitmap.recycle();
+//        mPreviousBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
+//        if (mPreviousBitmap == null) {
+//            throw new RuntimeException("setBitmap: Unable to allocate undo buffer (" + newW + "x" + newH + ")");
+//        }
+//        mPreviousCanvas = new Canvas();
+//        mPreviousCanvas.setBitmap(mPreviousBitmap);
+//
+//        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): bitmap=%s (%dx%d) mPreviousCanvas=%s",
+//            b.toString(), b.getWidth(), b.getHeight(),
+//            mPreviousBitmap.toString(), mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight(),
+//            mPreviousCanvas.toString()));
+//
+//        mEmpty = false;
     }
 
     public void setPenColor(int color) {
@@ -719,21 +731,12 @@ public class Slate extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
-        if (mCurrentBitmap != null) return;
+        if (mCurrentCanvas != null) return;
         
-        mCurrentBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        if (mCurrentBitmap == null) {
+        mCurrentCanvas = new TiledBitmapCanvas(w, h, Bitmap.Config.ARGB_8888);
+        if (mCurrentCanvas == null) {
             throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
         }
-        mCurrentCanvas = new Canvas();
-        mCurrentCanvas.setBitmap(mCurrentBitmap);
-
-        mPreviousBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        if (mCurrentBitmap == null) {
-            throw new RuntimeException("onSizeChanged: Unable to allocate undo buffer (" + w + "x" + h + ")");
-        }
-        mPreviousCanvas = new Canvas();
-        mPreviousCanvas.setBitmap(mPreviousBitmap);
 
         final Bitmap b = mPendingPaintBitmap; 
         if (b != null) {
@@ -744,12 +747,12 @@ public class Slate extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mCurrentBitmap != null) {
+        if (mCurrentCanvas != null) {
             if (!mDirtyRegion.isEmpty()) {
                 canvas.clipRegion(mDirtyRegion);
                 mDirtyRegion.setEmpty();
             }
-            canvas.drawBitmap(mCurrentBitmap, 0, 0, null);
+            mCurrentCanvas.drawTo(canvas, 0, 0, null, false); // @@ set to true for dirty tile updates
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
@@ -771,6 +774,7 @@ public class Slate extends View {
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH);
     }
     
+    @SuppressLint("NewApi")
     final static int getToolTypeCompat(MotionEvent me, int index) {
         if (hasToolType()) {
             return me.getToolType(index);
@@ -787,6 +791,7 @@ public class Slate extends View {
         return MotionEvent.TOOL_TYPE_FINGER;
     }
 
+    @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
@@ -835,7 +840,7 @@ public class Slate extends View {
                 			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
-                            mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
+                            //mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                         }
                         dbgX = mTmpSpot.x;
                         dbgY = mTmpSpot.y;
@@ -855,7 +860,7 @@ public class Slate extends View {
            			);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
-                        mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
+                        //mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                     }
                     dbgX = mTmpSpot.x;
                     dbgY = mTmpSpot.y;
@@ -896,7 +901,9 @@ public class Slate extends View {
     private void dirty(RectF r) {
         r.roundOut(tmpDirtyRect);
         tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
-        if (FANCY_INVALIDATES) {
+        if (INVALIDATE_ALL_THE_THINGS) {
+            invalidate();
+        } else if (FANCY_INVALIDATES) {
             mDirtyRegion.union(tmpDirtyRect);
             invalidate(); // enqueue invalidation
         } else {

@@ -161,7 +161,7 @@ public class MarkersActivity extends Activity
     }
     
     public static interface ViewFunc {
-        void apply(View v);
+        public void apply(View v);
     }
     public static void descend(ViewGroup parent, ViewFunc func) {
         for (int i=0; i<parent.getChildCount(); i++) {
