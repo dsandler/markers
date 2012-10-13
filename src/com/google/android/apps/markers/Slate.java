@@ -61,8 +61,6 @@ public class Slate extends View {
     
     public static final int MAX_POINTERS = 10;
 
-    public static final int TILE_SIZE = 256;
-
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
     private static final float SMOOTHING_FILTER_PRESSURE_DECAY = 0.9f;
@@ -287,19 +285,19 @@ public class Slate extends View {
 //                c.drawBitmap(mCircleBits, mCircleBitsFrame, tmpRF, mPaint);
 //                break;
             case SHAPE_BITMAP_AIRBRUSH:
-//                tmpRF.set(x-r,y-r,x+r,y+r);
-//                if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
-//                    throw new RuntimeException("Slate.drawStrokePoint: no airbrush bitmap - frame=" + mAirbrushBitsFrame);
-//                }
-//                c.drawBitmap(mAirbrushBits, mAirbrushBitsFrame, tmpRF, mPaint);
-//                break;
+                tmpRF.set(x-r,y-r,x+r,y+r);
+                if (mAirbrushBits == null || mAirbrushBitsFrame == null) {
+                    throw new RuntimeException("Slate.drawStrokePoint: no airbrush bitmap - frame=" + mAirbrushBitsFrame);
+                }
+                c.drawBitmap(mAirbrushBits, mAirbrushBitsFrame, tmpRF, mPaint);
+                break;
             case SHAPE_FOUNTAIN_PEN:
-//                tmpRF.set(x-r,y-r,x+r,y+r);
-//                if (mFountainPenBits == null || mFountainPenBitsFrame == null) {
-//                    throw new RuntimeException("Slate.drawStrokePoint: no fountainpen bitmap - frame=" + mFountainPenBitsFrame);
-//                }
-//                c.drawBitmap(mFountainPenBits, mFountainPenBitsFrame, tmpRF, mPaint);
-//                break;
+                tmpRF.set(x-r,y-r,x+r,y+r);
+                if (mFountainPenBits == null || mFountainPenBitsFrame == null) {
+                    throw new RuntimeException("Slate.drawStrokePoint: no fountainpen bitmap - frame=" + mFountainPenBitsFrame);
+                }
+                c.drawBitmap(mFountainPenBits, mFountainPenBitsFrame, tmpRF, mPaint);
+                break;
             case SHAPE_CIRCLE:
             default:
                 c.drawCircle(x, y, r, mPaint);

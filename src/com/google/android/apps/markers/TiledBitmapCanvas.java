@@ -6,10 +6,11 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.FloatMath;
 
 public class TiledBitmapCanvas implements CanvasLite {
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
 
     public static final int DEFAULT_TILE_SIZE = 256;
     private static final float INVALIDATE_PADDING = 4.0f;
@@ -122,6 +123,21 @@ public class TiledBitmapCanvas implements CanvasLite {
         for (int i=0; i<mTiles.length; i++) {
             mTiles[i].canvas.drawColor(color, mode);
             mTiles[i].dirty = true;
+        }
+    }
+
+    @Override
+    public void drawBitmap(Bitmap bitmap, Rect src, RectF dst, Paint paint) {
+        final int tilel = max(0,(int)FloatMath.floor((dst.left-INVALIDATE_PADDING) / mTileSize));
+        final int tilet = max(0,(int)FloatMath.floor((dst.top-INVALIDATE_PADDING) / mTileSize));
+        final int tiler = min(mTilesX-1, (int)FloatMath.ceil((dst.right+INVALIDATE_PADDING) / mTileSize));
+        final int tileb = min(mTilesY-1, (int)FloatMath.ceil((dst.bottom+INVALIDATE_PADDING) / mTileSize));
+        for (int tiley = tilet; tiley <= tileb; tiley++) {
+            for (int tilex = tilel; tilex <= tiler; tilex++) {
+                final Tile tile = mTiles[tiley*mTilesX + tilex];
+                tile.canvas.drawBitmap(bitmap, src, dst, paint);
+                tile.dirty = true;
+            }
         }
     }
 
