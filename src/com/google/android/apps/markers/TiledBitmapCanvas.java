@@ -6,6 +6,7 @@ import java.util.Collection;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
@@ -14,7 +15,8 @@ import android.util.FloatMath;
 import android.util.Log;
 
 public class TiledBitmapCanvas implements CanvasLite {
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
+    public static final String TAG = "Markers/TiledBitmapCanvas";
 
     public static final int DEFAULT_TILE_SIZE = 256;
     private static final float INVALIDATE_PADDING = 4.0f;
@@ -41,23 +43,76 @@ public class TiledBitmapCanvas implements CanvasLite {
         int top, bottom;
         boolean dirty;
         ArrayList<Version> versions;
+        private String debugVersions() {
+            StringBuffer sb = new StringBuffer();
+            sb.append("bot=");
+            sb.append(bottom);
+            sb.append(" top=");
+            sb.append(top);
+            sb.append(" [");
+            for (int i=0; i<versions.size(); i++) {
+                if (i > 0) sb.append(" ");
+                sb.append(versions.get(i).version);
+            }
+            sb.append("]");
+            return sb.toString();
+        }
         public Tile(int x, int y, int version) {
             this.x = x;
             this.y = y;
             versions = new ArrayList<Version>(MAX_VERSIONS);
-            top = bottom = makeVersion(version);
+            bottom = version;
+            createVersion(version); // sets top
             if (top < 0) {
                 throw new OutOfMemoryError("Could not create bitmap for tile " + x + "," + y);
             }
         };
-        public int makeVersion(int version) {
+        private Version createVersion(int version) {
             Version v = new Version(version);
             if (v.bitmap == null) {
                 // XXX handle memory error
-                return -1;
+                return null;
             }
-            versions.add(v);
-            return version;
+            if (versions.size() > 0) {
+                // XXX: this will be slow; maybe we can do the alloc & copy at commit time
+                v.canvas.drawBitmap(versions.get(0).bitmap, x*mTileSize, y*mTileSize, null);
+            }
+            versions.add(0, v);
+            top = version;
+            return v;
+        }
+        private int findVersion(int version) {
+            // short path
+            if (version >= top) return 0;
+            if (version < bottom) return -1;
+            for (int i=1; i<versions.size(); i++) {
+                final Version v = versions.get(i);
+                if (v.version <= version) {
+                    return i;
+                }
+            }
+            // this is just for the error
+            throw new RuntimeException(
+                    String.format("internal inconsistency: couldn't findVersion %d for tile (%d,%d) %s",
+                            version, x, y,
+                            debugVersions()));
+        }
+        private Version getVersion(int version) {
+            // short path
+            if (version == top) return versions.get(0);
+
+            // another common situation
+            if (version > top) return createVersion(version);
+
+            // ok, you're gonna make us go look
+            int i = findVersion(version);
+            if (i >= 0) {
+                return versions.get(i);
+            }
+
+            // we don't have it
+            Log.e(TAG, "Tile.getVersion: don't have v" + version + " at " + x + "," + y);
+            return null;
         }
         public void clear() {
             for (int i=0; i<versions.size(); i++) {
@@ -69,28 +124,19 @@ public class TiledBitmapCanvas implements CanvasLite {
             return versions.get(0).bitmap;
         }
         public Bitmap getBitmap(int version) {
-            return versions.get(findVersion(version)).bitmap;
+            return getVersion(version).bitmap;
         }
         public Canvas getCanvas() {
             return versions.get(0).canvas;
         }
         public Canvas getCanvas(int version) {
-            return versions.get(findVersion(version)).canvas;
+            return getVersion(version).canvas;
         }
         public void revert(int toVersion) {
             final int i = findVersion(toVersion);
+            if (i < 0) throw new RuntimeException("cannot revert to version " + toVersion + " because it is before bottom: " + bottom);
             if (i > 0) versions.subList(0, i).clear();
-            top = versions.get(i).version;
-        }
-        private int findVersion(int version) {
-            for (int i=0; i<versions.size(); i++) {
-                final Version v = versions.get(i);
-                if (v.version <= version) {
-                    return i;
-                }
-            }
-            throw new RuntimeException(
-                    "Version " + version + " does not exist in tile starting with version " + bottom);
+            top = versions.get(0).version;
         }
     }
     private Tile[] mTiles;
@@ -98,6 +144,8 @@ public class TiledBitmapCanvas implements CanvasLite {
     private int mWidth, mHeight, mTilesX, mTilesY;
 
     private Config mConfig;
+
+    private int mVersion = 0;
 
     public TiledBitmapCanvas() {
     }
@@ -136,10 +184,10 @@ public class TiledBitmapCanvas implements CanvasLite {
         for (int j=0; j<mTilesY; j++) {
             for (int i=0; i<mTilesX; i++) {
                 final int p = j * mTilesX + i;
-                final Tile t = new Tile(i, j, 0); // XXX: version
+                final Tile t = new Tile(i, j, mVersion); // XXX: version
                 mTiles[p] = t;
                 if (bitmap != null) {
-                    t.getCanvas().drawBitmap(bitmap, 0, 0, paint);
+                    t.getCanvas(mVersion).drawBitmap(bitmap, 0, 0, paint);
                 }
             }
         }
@@ -161,7 +209,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         for (int tiley = tilet; tiley <= tileb; tiley++) {
             for (int tilex = tilel; tilex <= tiler; tilex++) {
                 final Tile tile = mTiles[tiley*mTilesX + tilex];
-                tile.getCanvas().drawRect(l, t, r, b, paint);
+                tile.getCanvas(mVersion).drawRect(l, t, r, b, paint);
                 tile.dirty = true;
             }
         }
@@ -176,7 +224,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         for (int tiley = tilet; tiley <= tileb; tiley++) {
             for (int tilex = tilel; tilex <= tiler; tilex++) {
                 final Tile tile = mTiles[tiley*mTilesX + tilex];
-                tile.getCanvas().drawCircle(x, y, r, paint);
+                tile.getCanvas(mVersion).drawCircle(x, y, r, paint);
                 tile.dirty = true;
             }
         }
@@ -185,7 +233,7 @@ public class TiledBitmapCanvas implements CanvasLite {
     public void drawColor(int color, PorterDuff.Mode mode) {
         for (int i=0; i<mTiles.length; i++) {
             final Tile tile = mTiles[i];
-            tile.getCanvas().drawColor(color, mode);
+            tile.getCanvas(mVersion).drawColor(color, mode);
             tile.dirty = true;
         }
     }
@@ -199,7 +247,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         for (int tiley = tilet; tiley <= tileb; tiley++) {
             for (int tilex = tilel; tilex <= tiler; tilex++) {
                 final Tile tile = mTiles[tiley*mTilesX + tilex];
-                tile.getCanvas().drawBitmap(bitmap, src, dst, paint);
+                tile.getCanvas(mVersion).drawBitmap(bitmap, src, dst, paint);
                 tile.dirty = true;
             }
         }
@@ -210,6 +258,7 @@ public class TiledBitmapCanvas implements CanvasLite {
     private Paint dbgPaint2 = new Paint();
     private Paint dbgStroke = new Paint();
     private Paint dbgTextPaint = new Paint();
+
     @Override
     public void drawTo(Canvas drawCanvas, float left, float top, Paint paint, boolean onlyDirty) {
         final Rect src = new Rect(0, 0, mTileSize, mTileSize);
@@ -258,5 +307,23 @@ public class TiledBitmapCanvas implements CanvasLite {
         Canvas canvas = new Canvas(bitmap);
         drawTo(canvas, 0, 0, null, false);
         return bitmap;
+    }
+
+    public void commit() {
+        mVersion++;
+    }
+
+    public void step(int delta) {
+        if (mVersion + delta < 0) {
+            if (mVersion == 0) return; // we're already at the end
+            mVersion = 0;
+        } else {
+            mVersion += delta;
+        }
+        for (int i=0; i<mTiles.length; i++) {
+            final Tile tile = mTiles[i];
+            tile.revert(mVersion);
+            tile.dirty = true; // XXX: only do this if the version changed, i.e. tile.top > mVersion
+        }
     }
 }

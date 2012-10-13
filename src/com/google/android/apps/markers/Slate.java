@@ -52,7 +52,7 @@ public class Slate extends View {
     public static final boolean HWLAYER = true;
     public static final boolean SWLAYER = false;
     public static final boolean FANCY_INVALIDATES = false; // doesn't work
-    public static final boolean INVALIDATE_ALL_THE_THINGS = false; // invalidate() every frame
+    public static final boolean INVALIDATE_ALL_THE_THINGS = true; // invalidate() every frame
 
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
@@ -89,7 +89,7 @@ public class Slate extends View {
 
     int mDebugFlags = 0;
 
-    private TiledBitmapCanvas mPreviousCanvas, mCurrentCanvas;
+    private TiledBitmapCanvas mTiledCanvas;
     private final Paint mDebugPaints[] = new Paint[10];
     
     private Bitmap mPendingPaintBitmap;
@@ -142,7 +142,7 @@ public class Slate extends View {
             final float radius = lerp(mRadiusMin, mRadiusMax,
                     (float) Math.pow(pressureNorm, mPressureExponent));
             
-            final RectF dirtyF = mRenderer.strokeTo(mCurrentCanvas, s.x, s.y, radius);
+            final RectF dirtyF = mRenderer.strokeTo(mTiledCanvas, s.x, s.y, radius);
             dirty(dirtyF);
 //            dirtyF.roundOut(tmpDirtyRect);
 //            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
@@ -485,20 +485,16 @@ public class Slate extends View {
 
     public void recycle() {
     	// WARNING: the slate will not be usable until you call load() or clear() or something
-    	if (mPreviousCanvas != null) {
-	    	mPreviousCanvas.recycleBitmaps(); 
-	    	mPreviousCanvas = null;
-    	}
-    	if (mCurrentCanvas != null) {
-	    	mCurrentCanvas.recycleBitmaps();
-	        mCurrentCanvas = null;
+    	if (mTiledCanvas != null) {
+	    	mTiledCanvas.recycleBitmaps();
+	        mTiledCanvas = null;
     	}
     }
 
     public void clear() {
-        if (mCurrentCanvas != null) {
+        if (mTiledCanvas != null) {
             commitStroke();
-            mCurrentCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
+            mTiledCanvas.drawColor(0x00000000, PorterDuff.Mode.SRC);
             invalidate();
         } else if (mPendingPaintBitmap != null) { // FIXME for tiling
             mPendingPaintBitmap.recycle();
@@ -591,58 +587,43 @@ public class Slate extends View {
     }
 
     public void commitStroke() {
-        if (mPreviousCanvas == null) return;
-        // FIXME for tiling
-//
-//        TiledBitmapCanvas swapCanvas = mPreviousCanvas;
-//
-//        mPreviousCanvas = mCurrentCanvas;
-//
-//        swapCanvas.save();
-//        swapCanvas.setMatrix(null);
-//        swapCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-//        if (DEBUG) { 
-//            Log.v(TAG, "swapCanvas: drawing bitmap into new canvas");
-//        }
-//        swapCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
-//        swapCanvas.restore();
-//
-//        mCurrentCanvas = swapCanvas;
-//        mCurrentBitmap = swapBitmap;
+        if (mTiledCanvas == null) {
+            Log.v(TAG, "commitStroke before mTiledCanvas inited");
+        }
+        mTiledCanvas.commit();
     }
 
     public void undo() {
-        mCurrentCanvas.drawColor(0, PorterDuff.Mode.CLEAR);
-        // FIXME for tiling
-        //mCurrentCanvas.drawBitmap(mPreviousBitmap, 0, 0, null);
+        if (mTiledCanvas == null) {
+            Log.v(TAG, "undo before mTiledCanvas inited");
+        }
+        mTiledCanvas.step(-1);
 
         invalidate();
     }
 
     public void paintBitmap(Bitmap b) {
-        if (mCurrentCanvas == null) {
+        if (mTiledCanvas == null) {
             mPendingPaintBitmap = b;
             return;
         }
 
         commitStroke();
-        // FIXME for tiling
-//
-//        Matrix m = new Matrix();
-//        RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
-//        RectF d = new RectF(0, 0, mCurrentCanvas.getWidth(), mCurrentCanvas.getHeight());
-//        m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
-//        
-//        if (DEBUG) { 
-//            Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
-//        }
-//        mCurrentCanvas.drawBitmap(b, m, sBitmapPaint);
-//        invalidate();
-//
-//        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): bitmap=%s (%dx%d) canvas=%s",
-//            b.toString(), b.getWidth(), b.getHeight(),
-//            mCurrentBitmap.toString(), mCurrentBitmap.getWidth(), mCurrentBitmap.getHeight(),
-//            mCurrentCanvas.toString()));
+
+        Matrix m = new Matrix();
+        RectF s = new RectF(0, 0, b.getWidth(), b.getHeight());
+        RectF d = new RectF(0, 0, mTiledCanvas.getWidth(), mTiledCanvas.getHeight());
+        m.setRectToRect(s, d, Matrix.ScaleToFit.CENTER);
+        
+        if (DEBUG) { 
+            Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
+        }
+        // mTiledCanvas.drawBitmap(b, m, sBitmapPaint); // XXX: FIXME
+        invalidate();
+
+        if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): canvas=%s",
+            b.toString(), b.getWidth(), b.getHeight(),
+            mTiledCanvas.toString()));
     }
 
     public void setDrawingBackground(int color) {
@@ -654,7 +635,7 @@ public class Slate extends View {
     public Bitmap getBitmap() {
         commitStroke();
         // FIXME for tiling
-        return mCurrentCanvas.toBitmap();
+        return mTiledCanvas.toBitmap();
     }
 
     public Bitmap copyBitmap(boolean withBackground) {
@@ -673,43 +654,22 @@ public class Slate extends View {
     public void setBitmap(Bitmap b) {
         if (b == null) return;
         
-        mCurrentCanvas.recycleBitmaps();
-        mCurrentCanvas = new TiledBitmapCanvas(b);
+        mTiledCanvas.recycleBitmaps();
+        mTiledCanvas = new TiledBitmapCanvas(b);
         mEmpty = false;
         
         // XXX FIXME for tiling
 
-//        int newW = b.getWidth();
-//        int newH = b.getHeight();
-//        Bitmap newBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
-//        if (newBitmap == null) {
-//            throw new RuntimeException("setBitmap: Unable to allocate main buffer (" + newW + "x" + newH + ")");
-//        }
-//        Canvas newCanvas = new Canvas();
-//        newCanvas.setBitmap(newBitmap);
-//        if (DEBUG) { 
-//            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
-//        }
-//        newCanvas.drawBitmap(b, 0, 0, null);
-//        
-//        if (mCurrentBitmap != null && !mCurrentBitmap.isRecycled()) mCurrentBitmap.recycle();
-//        mCurrentBitmap = newBitmap;
-//        mCurrentCanvas = newCanvas;
-//
-//        if (mPreviousBitmap != null && !mPreviousBitmap.isRecycled()) mPreviousBitmap.recycle();
-//        mPreviousBitmap = Bitmap.createBitmap(newW, newH, Bitmap.Config.ARGB_8888);
-//        if (mPreviousBitmap == null) {
-//            throw new RuntimeException("setBitmap: Unable to allocate undo buffer (" + newW + "x" + newH + ")");
-//        }
-//        mPreviousCanvas = new Canvas();
-//        mPreviousCanvas.setBitmap(mPreviousBitmap);
-//
-//        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): bitmap=%s (%dx%d) mPreviousCanvas=%s",
-//            b.toString(), b.getWidth(), b.getHeight(),
-//            mPreviousBitmap.toString(), mPreviousBitmap.getWidth(), mPreviousBitmap.getHeight(),
-//            mPreviousCanvas.toString()));
-//
-//        mEmpty = false;
+        if (DEBUG) { 
+            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
+        }
+        // mTiledCanvas.drawBitmap(b, 0, 0, null);
+
+        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mTiledCanvas=%s",
+            b.toString(), b.getWidth(), b.getHeight(),
+            mTiledCanvas.toString()));
+
+        mEmpty = false;
     }
 
     public void setPenColor(int color) {
@@ -729,10 +689,10 @@ public class Slate extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
-        if (mCurrentCanvas != null) return;
+        if (mTiledCanvas != null) return;
         
-        mCurrentCanvas = new TiledBitmapCanvas(w, h, Bitmap.Config.ARGB_8888);
-        if (mCurrentCanvas == null) {
+        mTiledCanvas = new TiledBitmapCanvas(w, h, Bitmap.Config.ARGB_8888);
+        if (mTiledCanvas == null) {
             throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
         }
 
@@ -745,12 +705,12 @@ public class Slate extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mCurrentCanvas != null) {
+        if (mTiledCanvas != null) {
             if (!mDirtyRegion.isEmpty()) {
                 canvas.clipRegion(mDirtyRegion);
                 mDirtyRegion.setEmpty();
             }
-            mCurrentCanvas.drawTo(canvas, 0, 0, null, false); // @@ set to true for dirty tile updates
+            mTiledCanvas.drawTo(canvas, 0, 0, null, false); // @@ set to true for dirty tile updates
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
@@ -838,7 +798,7 @@ public class Slate extends View {
                 			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
-                            //mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
+                            //mTiledCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                         }
                         dbgX = mTmpSpot.x;
                         dbgY = mTmpSpot.y;
@@ -858,7 +818,7 @@ public class Slate extends View {
            			);
                 if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                     if (dbgX >= 0) {
-                        //mCurrentCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
+                        //mTiledCanvas.drawLine(dbgX, dbgY, mTmpSpot.x, mTmpSpot.y, mDebugPaints[3]);
                     }
                     dbgX = mTmpSpot.x;
                     dbgY = mTmpSpot.y;
