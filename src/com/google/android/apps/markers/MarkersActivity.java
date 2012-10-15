@@ -28,6 +28,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -415,6 +416,7 @@ public class MarkersActivity extends Activity
         return mActionBarView.getVisibility() == View.VISIBLE;
     }
 
+    @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
         if (!show) {
             if (hasAnimations() && animate) {
@@ -512,6 +514,7 @@ public class MarkersActivity extends Activity
         return loadDrawing(filename, false);
     }
 
+    @TargetApi(8)
     public File getPicturesDirectory() {
         final File d;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO) {
@@ -737,7 +740,7 @@ public class MarkersActivity extends Activity
             winParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
             winParams.y = getResources().getDimensionPixelOffset(R.dimen.action_bar_height);
             dialogWin.setAttributes(winParams);
-            dialogWin.setWindowAnimations(0x010301e3); //android.R.style.Animation);
+            dialogWin.setWindowAnimations(android.R.style.Animation_Translucent);
             dialogWin.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             mMenuDialog.setCanceledOnTouchOutside(true); 
 
