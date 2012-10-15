@@ -618,7 +618,7 @@ public class Slate extends View {
         if (DEBUG) { 
             Log.v(TAG, "paintBitmap: drawing new bits into current canvas");
         }
-        // mTiledCanvas.drawBitmap(b, m, sBitmapPaint); // XXX: FIXME
+        mTiledCanvas.drawBitmap(b, m, sBitmapPaint);
         invalidate();
 
         if (DEBUG) Log.d(TAG, String.format("paintBitmap(%s, %dx%d): canvas=%s",

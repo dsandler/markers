@@ -253,6 +253,23 @@ public class TiledBitmapCanvas implements CanvasLite {
         }
     }
 
+    @Override
+    public void drawBitmap(Bitmap bitmap, Matrix matrix, Paint paint) {
+        RectF dst = new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        matrix.mapRect(dst);
+        final int tilel = max(0,(int)FloatMath.floor((dst.left-INVALIDATE_PADDING) / mTileSize));
+        final int tilet = max(0,(int)FloatMath.floor((dst.top-INVALIDATE_PADDING) / mTileSize));
+        final int tiler = min(mTilesX-1, (int)FloatMath.ceil((dst.right+INVALIDATE_PADDING) / mTileSize));
+        final int tileb = min(mTilesY-1, (int)FloatMath.ceil((dst.bottom+INVALIDATE_PADDING) / mTileSize));
+        for (int tiley = tilet; tiley <= tileb; tiley++) {
+            for (int tilex = tilel; tilex <= tiler; tilex++) {
+                final Tile tile = mTiles[tiley*mTilesX + tilex];
+                tile.getCanvas(mVersion).drawBitmap(bitmap, matrix, paint);
+                tile.dirty = true;
+            }
+        }
+    }
+
     private int mDrawCount = 0;
     private Paint dbgPaint1 = new Paint();
     private Paint dbgPaint2 = new Paint();
