@@ -186,6 +186,17 @@ public class MarkersActivity extends Activity
         }
     }
 
+    @TargetApi(11)
+    private void setupLayers() {
+        if (mComboHudView != null) {
+            mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        } else {
+            mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }
+        mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+    }
+
     @Override
     public void onCreate(Bundle icicle)
     {
@@ -227,6 +238,9 @@ public class MarkersActivity extends Activity
         mToolsView = findViewById(R.id.tools);
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
+        
+        setupLayers(); // the HUD needs to have a software layer at all times 
+                       // so we can draw through it quickly
 
         mDebugButton = findViewById(R.id.debug);
 
@@ -476,14 +490,6 @@ public class MarkersActivity extends Activity
     public void setHUDVisibility(boolean show, boolean animate) {
         if (!show) {
             if (hasAnimations() && animate) {
-                if (mComboHudView != null) {
-                    mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                } else {
-                    mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                    mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                }
-                mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-
                 AnimatorSet a = new AnimatorSet();
                 AnimatorSet.Builder b = 
                         a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 1f, 0.5f))
@@ -498,15 +504,12 @@ public class MarkersActivity extends Activity
                     public void onAnimationEnd(Animator a) {
                         if (mComboHudView != null) {
                             mComboHudView.setVisibility(View.GONE);
+                            mComboHudView.setLayerType(View.LAYER_TYPE_NONE, null);
                         } else {
                             mColorsView.setVisibility(View.GONE);
                             mToolsView.setVisibility(View.GONE);
                         }
                         mActionBarView.setVisibility(View.GONE);
-                        
-                        mToolsView.setLayerType(View.LAYER_TYPE_NONE, null);
-                        mColorsView.setLayerType(View.LAYER_TYPE_NONE, null);
-                        mActionBarView.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
                 a.start();
@@ -531,14 +534,6 @@ public class MarkersActivity extends Activity
             }
             mActionBarView.setVisibility(View.VISIBLE);
             if (hasAnimations() && animate) {
-                if (mComboHudView != null) {
-                    mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                } else {
-                    mToolsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                    mColorsView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                }
-                mActionBarView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-
                 AnimatorSet a = new AnimatorSet();
                 AnimatorSet.Builder b = 
                         a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 0.5f, 1f))
@@ -553,11 +548,11 @@ public class MarkersActivity extends Activity
                     public void onAnimationEnd(Animator a) {
                         if (mComboHudView != null) {
                             mComboHudView.setVisibility(View.VISIBLE);
+                            mComboHudView.setLayerType(View.LAYER_TYPE_NONE, null);
                         } else {
                             mColorsView.setVisibility(View.VISIBLE);
                             mToolsView.setVisibility(View.VISIBLE);
                         }
-                        mActionBarView.setLayerType(View.LAYER_TYPE_NONE, null);
                     }
                 });
                 a.start();
