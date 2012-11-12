@@ -588,7 +588,10 @@ public class Slate extends View {
 
     public void commitStroke() {
         if (mTiledCanvas == null) {
-            Log.v(TAG, "commitStroke before mTiledCanvas inited");
+            final Throwable e = new Throwable();
+            e.fillInStackTrace();
+            Log.v(TAG, "commitStroke before mTiledCanvas inited", e);
+            return;
         }
         mTiledCanvas.commit();
     }

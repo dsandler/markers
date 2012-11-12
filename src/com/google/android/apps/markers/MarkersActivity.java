@@ -34,6 +34,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -68,6 +69,8 @@ import android.widget.Toast;
 
 import org.dsandler.apps.markers.R;
 
+import com.google.android.apps.markers.ToolButton.SwatchButton;
+
 public class MarkersActivity extends Activity
 {
     final static int LOAD_IMAGE = 1000;
@@ -78,6 +81,11 @@ public class MarkersActivity extends Activity
     public static final String IMAGE_SAVE_DIRNAME = "Drawings";
     public static final String IMAGE_TEMP_DIRNAME = IMAGE_SAVE_DIRNAME + "/.temporary";
     public static final String WIP_FILENAME = "temporary.png";
+    
+    public static final String PREF_LAST_TOOL = "tool";
+    public static final String PREF_LAST_TOOL_TYPE = "tool_type";
+    public static final String PREF_LAST_COLOR = "color";
+    public static final String PREF_LAST_HUDSTATE = "hudup";
 
     private boolean mJustLoadedImage = false;
 
@@ -95,6 +103,8 @@ public class MarkersActivity extends Activity
     private View mComboHudView;
     
     private Dialog mMenuDialog;
+
+    private SharedPreferences mPrefs;
 
     private LinkedList<String> mDrawingsToScan = new LinkedList<String>();
 
@@ -134,6 +144,7 @@ public class MarkersActivity extends Activity
                     }
                 }
             };
+
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -216,12 +227,12 @@ public class MarkersActivity extends Activity
         mToolsView = findViewById(R.id.tools);
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
-        
+
+        mDebugButton = findViewById(R.id.debug);
+
         TextView title = (TextView) mActionBarView.findViewById(R.id.logotype);
         Typeface light = Typeface.create("sans-serif-light", Typeface.NORMAL);
         title.setTypeface(light);
-
-        setHUDVisibility(false, false);
 
         final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
@@ -232,6 +243,8 @@ public class MarkersActivity extends Activity
                 
                 if (mLastTool != mActiveTool) {
                     mLastTool.deactivate();
+                    mPrefs.edit().putString(PREF_LAST_TOOL, (String) mActiveTool.getTag())
+                        .commit();
                 }
             }
             @Override
@@ -241,6 +254,7 @@ public class MarkersActivity extends Activity
                 mActiveColor = tool;
                 if (mLastColor != mActiveColor) {
                     mLastColor.deactivate();
+                    mPrefs.edit().putInt(PREF_LAST_COLOR, color).commit();
                 }
             }
             @Override
@@ -250,12 +264,21 @@ public class MarkersActivity extends Activity
                 mActivePenType = tool;
                 if (mLastPenType != mActivePenType) {
                     mLastPenType.deactivate();
+                    mPrefs.edit().putString(PREF_LAST_TOOL_TYPE, (String) mActivePenType.getTag())
+                        .commit();
                 }
             }
             @Override
             public void restore(ToolButton tool) {
-                if (tool == mActiveTool && tool != mLastTool) mLastTool.click();
-                else if (tool == mActiveColor && tool != mLastColor) mLastColor.click();
+                if (tool == mActiveTool && tool != mLastTool) {
+                    mLastTool.click();
+                    mPrefs.edit().putString(PREF_LAST_TOOL, (String) mActiveTool.getTag())
+                        .commit();
+                } else if (tool == mActiveColor && tool != mLastColor) {
+                    mLastColor.click();
+                    mPrefs.edit().putInt(PREF_LAST_COLOR, ((SwatchButton) mLastColor).color)
+                        .commit();
+                }
             }
             @Override
             public void setBackgroundColor(ToolButton tool, int color) {
@@ -269,10 +292,6 @@ public class MarkersActivity extends Activity
                 final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
                 if (swatch != null) {
                     swatch.setCallback(toolCB);
-                    if (mActiveColor == null) {
-                        mLastColor = mActiveColor = swatch;
-                        swatch.click();
-                    }
                 }
             }
         });
@@ -292,9 +311,6 @@ public class MarkersActivity extends Activity
         if (fatMarkerButton != null) {
             fatMarkerButton.setCallback(toolCB);
         }
-        
-        mLastTool = mActiveTool = (penThickButton != null) ? penThickButton : penThinButton;
-        mActiveTool.click();
 
         final ToolButton typeWhiteboardButton = (ToolButton) findViewById(R.id.whiteboard_marker);
         typeWhiteboardButton.setCallback(toolCB);
@@ -315,12 +331,52 @@ public class MarkersActivity extends Activity
         }
         
         mLastPenType = mActivePenType = typeWhiteboardButton;
+
+        loadSettings();
+
+        mActiveTool.click();
         mActivePenType.click();
 
-        mDebugButton = findViewById(R.id.debug);
-        
         // clickDebug(null); // auto-debug mode for testing devices
-   }
+    }
+
+    private void loadSettings() {
+        mPrefs = getPreferences(MODE_PRIVATE);
+
+        final String toolTag = mPrefs.getString(PREF_LAST_TOOL, null);
+        if (toolTag != null) {
+            mActiveTool = (ToolButton) mToolsView.findViewWithTag(toolTag);
+        }
+        if (mActiveTool == null) {
+            mActiveTool = (ToolButton) mToolsView.findViewById(R.id.pen_thick);
+        }
+        if (mActiveTool == null) {
+            mActiveTool = (ToolButton) mToolsView.findViewById(R.id.pen_thin);
+        }
+        mLastTool = mActiveTool;
+        if (mActiveTool != null) mActiveTool.click();
+
+        final String typeTag = mPrefs.getString(PREF_LAST_TOOL_TYPE, "type_whiteboard");
+        mLastPenType = mActivePenType = (ToolButton) mToolsView.findViewWithTag(typeTag);
+        if (mActivePenType != null) mActivePenType.click();
+
+        final int color = mPrefs.getInt(PREF_LAST_COLOR, 0xFF000000);
+        descend((ViewGroup) mColorsView, new ViewFunc() {
+            @Override
+            public void apply(View v) {
+                final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
+                if (swatch != null) {
+                    if (color == swatch.color) {
+                        mActiveColor = swatch;
+                    }
+                }
+            }
+        });
+        mLastColor = mActiveColor;
+        if (mActiveColor != null) mActiveColor.click();
+
+        setHUDVisibility(mPrefs.getBoolean(PREF_LAST_HUDSTATE, false), false);
+    }
 
     @Override
     public void onPause() {
@@ -462,6 +518,9 @@ public class MarkersActivity extends Activity
                     mToolsView.setVisibility(View.GONE);
                 }
                 mActionBarView.setVisibility(View.GONE);
+                if (hasAnimations()) {
+                    mLogoView.setAlpha(0.5f);
+                }
             }
         } else {
             if (mComboHudView != null) {
@@ -502,8 +561,13 @@ public class MarkersActivity extends Activity
                     }
                 });
                 a.start();
+            } else {
+                if (hasAnimations()) {
+                    mLogoView.setAlpha(1f);
+                }
             }
         }
+        mPrefs.edit().putBoolean(PREF_LAST_HUDSTATE, show).commit();
     }
 
     public void clickClear(View v) {
