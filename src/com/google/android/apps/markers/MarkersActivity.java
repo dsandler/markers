@@ -188,6 +188,8 @@ public class MarkersActivity extends Activity
 
     @TargetApi(11)
     private void setupLayers() {
+        if (!hasAnimations()) return;
+
         if (mComboHudView != null) {
             mComboHudView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         } else {
