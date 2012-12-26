@@ -30,6 +30,8 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
@@ -93,7 +95,7 @@ public class Slate extends View {
     private final Paint mDebugPaints[] = new Paint[10];
     
     private Bitmap mPendingPaintBitmap;
-    
+
 //    private Bitmap mCircleBits;
 //    private Rect mCircleBitsFrame;
     private Bitmap mAirbrushBits;
@@ -102,9 +104,13 @@ public class Slate extends View {
     private Rect mFountainPenBitsFrame;
         
     private PressureCooker mPressureCooker;
-    
+
+    private boolean mZoomMode;
+    private PointF mTouchPoint = new PointF();
+    private float mTouchSpan = 1.0f;
+
     private boolean mEmpty;
-    
+
     private Region mDirtyRegion = new Region();
 
     public interface SlateListener {
@@ -752,6 +758,24 @@ public class Slate extends View {
         return MotionEvent.TOOL_TYPE_FINGER;
     }
 
+    static final PointF getCenter(MotionEvent event, PointF out) {
+        int P = event.getPointerCount();
+        PointF pt = ((out == null) ? new PointF() : out);
+        pt.set(event.getX(0), event.getY(0));
+        for (int j = 1; j < P; j++) {
+            pt.x += event.getX(j);
+            pt.y += event.getY(j);
+        }
+        pt.x /= P;
+        pt.y /= P;
+        return pt;
+    }
+    static final float getSpan(MotionEvent event) {
+        int P = event.getPointerCount();
+        if (P < 2) return 0;
+        return (float) Math.hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1)); 
+    }
+
     @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -765,6 +789,35 @@ public class Slate extends View {
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
             commitStroke();
+        }
+
+        if (mZoomMode) {
+            if (action == MotionEvent.ACTION_DOWN
+                    || action == MotionEvent.ACTION_POINTER_DOWN
+                    || action == MotionEvent.ACTION_POINTER_UP) {
+                getCenter(event, mTouchPoint);
+                mTouchSpan = getSpan(event) / getScaleX();
+            } else if (action == MotionEvent.ACTION_UP) {
+                mTouchPoint.set(0,0);
+            } else if (action == MotionEvent.ACTION_MOVE) {
+                if (mTouchSpan != 0f) {
+                    float scale = getSpan(event) / mTouchSpan;
+                    //Log.v(TAG, "scale=" + scale);
+                    if (scale != 0f) {
+                        setScaleX(scale);
+                        setScaleY(scale);
+                    }
+                }
+                if (getScaleX() < 1.0f) {
+                    setTranslationX(0);
+                    setTranslationY(0);
+                } else {
+                    PointF newCenter = getCenter(event, null);
+                    setTranslationX(getTranslationX() + newCenter.x - mTouchPoint.x);
+                    setTranslationY(getTranslationY() + newCenter.y - mTouchPoint.y);
+                }
+            }
+            return true;
         }
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
@@ -870,5 +923,9 @@ public class Slate extends View {
         } else {
             invalidate(tmpDirtyRect);
         }
+    }
+
+    public void setZoomMode(boolean b) {
+        mZoomMode = b;
     }
 }

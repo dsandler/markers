@@ -24,6 +24,16 @@
 	android:layout_height="match_parent"
     android:paddingRight="@dimen/tool_palette_gutter"
 	>
+    <!-- zoomer -->
+    <view
+        class="com.google.android.apps.markers.ToolButton$ZoomToolButton"
+        android:id="@+id/tool_zoom"
+        android:tag="tool_zoom"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:padding="10dp"
+        android:layout_weight="1"
+        />
     <!-- felt tip pen -->
     <view
         class="com.google.android.apps.markers.ToolButton$PenToolButton"

@@ -253,6 +253,7 @@ public class MarkersActivity extends Activity
         final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
             public void setPenMode(ToolButton tool, float min, float max) {
+                mSlate.setZoomMode(false);
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
                 mActiveTool = tool;
@@ -300,6 +301,18 @@ public class MarkersActivity extends Activity
             public void setBackgroundColor(ToolButton tool, int color) {
                 mSlate.setDrawingBackground(color);
             }
+            @Override
+            public void setZoomMode(ToolButton me) {
+                mSlate.setZoomMode(true);
+                mLastTool = mActiveTool;
+                mActiveTool = me;
+                
+                if (mLastTool != mActiveTool) {
+                    mLastTool.deactivate();
+                    mPrefs.edit().putString(PREF_LAST_TOOL, (String) mActiveTool.getTag())
+                        .commit();
+                }
+            }
         };
         
         descend((ViewGroup) mColorsView, new ViewFunc() {
@@ -311,7 +324,10 @@ public class MarkersActivity extends Activity
                 }
             }
         });
-        
+
+        final ToolButton zoomButton = (ToolButton) findViewById(R.id.tool_zoom);
+        zoomButton.setCallback(toolCB);
+
         final ToolButton penThinButton = (ToolButton) findViewById(R.id.pen_thin);
         penThinButton.setCallback(toolCB);
 
@@ -490,6 +506,10 @@ public class MarkersActivity extends Activity
 
     @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
+        mSlate.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | (show ? 0 : View.SYSTEM_UI_FLAG_FULLSCREEN)
+        );
         if (!show) {
             if (hasAnimations() && animate) {
                 AnimatorSet a = new AnimatorSet();
