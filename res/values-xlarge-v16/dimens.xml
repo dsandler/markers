@@ -17,5 +17,5 @@
 <resources>
     <!-- starting with Jelly Bean, there is a 25dp status bar on xlarge -->
     <dimen name="status_bar_height">25dp</dimen>
-    <dimen name="tools_margin_top">73dp</dimen>
+    <dimen name="tools_margin_top">81dp</dimen>
 </resources>

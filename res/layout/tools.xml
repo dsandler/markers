@@ -31,8 +31,9 @@
         android:tag="tool_zoom"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:padding="10dp"
+        android:padding="6dp"
         android:layout_weight="1"
+        android:layout_marginBottom="@dimen/tool_palette_gutter"
         />
     <!-- felt tip pen -->
     <view
