@@ -106,12 +106,13 @@ public class Slate extends View {
     private PressureCooker mPressureCooker;
 
     private boolean mZoomMode;
-    private PointF mTouchPoint = new PointF();
-    private float mTouchSpan = 1.0f;
 
     private boolean mEmpty;
 
     private Region mDirtyRegion = new Region();
+
+    private Matrix mZoomMatrix = new Matrix();
+    private float mPanX = 0f, mPanY = 0f;
 
     public interface SlateListener {
         void strokeStarted();
@@ -483,6 +484,41 @@ public class Slate extends View {
     }
 
     public boolean isEmpty() { return mEmpty; }
+
+    public void setZoomPos(float x, float y) {
+        mPanX = x;
+        mPanY = y;
+        invalidate();
+    }
+
+    public void setZoomPos(float[] pos) {
+        mPanX = pos[0];
+        mPanY = pos[1];
+        invalidate();
+    }
+
+    public float[] getZoomPos(float[] pos) {
+        if (pos == null) pos = new float[2];
+        pos[0] = mPanX;
+        pos[1] = mPanY;
+        return pos;
+    }
+
+    public float getZoomPosX() {
+        return mPanX;
+    }
+
+    public float getZoomPosY() {
+        return mPanY;
+    }
+
+    public Matrix getZoom() {
+        return mZoomMatrix;
+    }
+
+    public void setZoom(Matrix m) {
+        mZoomMatrix.set(m);
+    }
     
     public void setPenSize(float min, float max) {
         mRadiusMin = min * 0.5f;
@@ -715,6 +751,12 @@ public class Slate extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mTiledCanvas != null) {
+            canvas.save();
+            Matrix m = new Matrix();
+//            m.preTranslate(mZoomPivotX, mZoomPivotY);
+            canvas.concat(mZoomMatrix);
+            canvas.translate(mPanX, mPanY);
+            
             if (!mDirtyRegion.isEmpty()) {
                 canvas.clipRegion(mDirtyRegion);
                 mDirtyRegion.setEmpty();
@@ -723,6 +765,8 @@ public class Slate extends View {
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
+
+            canvas.restore();
             
             if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
                 mPressureCooker.drawDebug(canvas);
@@ -758,22 +802,33 @@ public class Slate extends View {
         return MotionEvent.TOOL_TYPE_FINGER;
     }
 
-    static final PointF getCenter(MotionEvent event, PointF out) {
+    PointF getCenter(MotionEvent event, PointF out) {
         int P = event.getPointerCount();
         PointF pt = ((out == null) ? new PointF() : out);
         pt.set(event.getX(0), event.getY(0));
+        final int zero[] = { 0, 0 };
+        getLocationOnScreen(zero);
         for (int j = 1; j < P; j++) {
-            pt.x += event.getX(j);
-            pt.y += event.getY(j);
+            pt.x += event.getX(j) + zero[0];
+            pt.y += event.getY(j) + zero[1];
         }
         pt.x /= P;
         pt.y /= P;
         return pt;
     }
-    static final float getSpan(MotionEvent event) {
+    double getSpan(MotionEvent event) {
         int P = event.getPointerCount();
         if (P < 2) return 0;
-        return (float) Math.hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1)); 
+        final int zero[] = { 0, 0 };
+        getLocationOnScreen(zero);
+        final double x0 = event.getX(0) + zero[0];
+        final double x1 = event.getX(1) + zero[0];
+        final double y0 = event.getY(0) + zero[1];
+        final double y1 = event.getY(1) + zero[1];
+        final double span = Math.hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1));
+        Log.v(TAG, String.format("zoom: p0=(%g,%g) p1=(%g,%g) span=%g",
+                x0, y0, x1, y1, span));
+        return span; 
     }
 
     @SuppressLint("NewApi")
@@ -792,32 +847,7 @@ public class Slate extends View {
         }
 
         if (mZoomMode) {
-            if (action == MotionEvent.ACTION_DOWN
-                    || action == MotionEvent.ACTION_POINTER_DOWN
-                    || action == MotionEvent.ACTION_POINTER_UP) {
-                getCenter(event, mTouchPoint);
-                mTouchSpan = getSpan(event) / getScaleX();
-            } else if (action == MotionEvent.ACTION_UP) {
-                mTouchPoint.set(0,0);
-            } else if (action == MotionEvent.ACTION_MOVE) {
-                if (mTouchSpan != 0f) {
-                    float scale = getSpan(event) / mTouchSpan;
-                    //Log.v(TAG, "scale=" + scale);
-                    if (scale != 0f) {
-                        setScaleX(scale);
-                        setScaleY(scale);
-                    }
-                }
-                if (getScaleX() < 1.0f) {
-                    setTranslationX(0);
-                    setTranslationY(0);
-                } else {
-                    PointF newCenter = getCenter(event, null);
-                    setTranslationX(getTranslationX() + newCenter.x - mTouchPoint.x);
-                    setTranslationY(getTranslationY() + newCenter.y - mTouchPoint.y);
-                }
-            }
-            return true;
+            return false;
         }
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN

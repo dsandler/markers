@@ -90,6 +90,7 @@ public class MarkersActivity extends Activity
     private boolean mJustLoadedImage = false;
 
     private Slate mSlate;
+    private ZoomTouchView mZoomView;
 
     private ToolButton mLastTool, mActiveTool;
     private ToolButton mLastColor, mActiveColor;
@@ -226,6 +227,11 @@ public class MarkersActivity extends Activity
         }
         final ViewGroup root = ((ViewGroup)findViewById(R.id.root));
         root.addView(mSlate, 0);
+        mZoomView = new ZoomTouchView(this);
+        mZoomView.setSlate(mSlate);
+        mZoomView.setEnabled(false);
+        mZoomView.setAlpha(0);
+        root.addView(mZoomView, 0);
         
         mMediaScannerConnection =
                 new MediaScannerConnection(MarkersActivity.this, mMediaScannerClient); 
@@ -254,6 +260,7 @@ public class MarkersActivity extends Activity
             @Override
             public void setPenMode(ToolButton tool, float min, float max) {
                 mSlate.setZoomMode(false);
+                mZoomView.setEnabled(false);
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
                 mActiveTool = tool;
@@ -304,6 +311,7 @@ public class MarkersActivity extends Activity
             @Override
             public void setZoomMode(ToolButton me) {
                 mSlate.setZoomMode(true);
+                mZoomView.setEnabled(true);
                 mLastTool = mActiveTool;
                 mActiveTool = me;
                 
