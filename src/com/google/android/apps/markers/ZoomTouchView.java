@@ -14,6 +14,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 
 public class ZoomTouchView extends View {
     public static final String TAG = Slate.TAG;
@@ -25,6 +26,7 @@ public class ZoomTouchView extends View {
     private float[] mTouchPoint = new float[2]; // screen coordinates
     private float[] mTouchPointDoc = new float[2]; // doc coordinates
     private double mInitialSpan = 1.0f;
+    private long mTouchTime;
 
     private float[] mInitialPos = new float[2];
 
@@ -80,6 +82,7 @@ public class ZoomTouchView extends View {
         int action = event.getActionMasked();
 
         if (isEnabled()) {
+            ViewConfiguration vc = ViewConfiguration.get(getContext());
             //final Matrix currentM = mSlate.getMatrix();
 
             if (action == MotionEvent.ACTION_DOWN
@@ -87,6 +90,18 @@ public class ZoomTouchView extends View {
                     || action == MotionEvent.ACTION_POINTER_UP
                     || action == MotionEvent.ACTION_UP) {
                 mTouchPoint[0] = mTouchPoint[1] = -1f;
+                if (action == MotionEvent.ACTION_DOWN) {
+                    final long now = event.getEventTime();
+                    if (now - mTouchTime < ViewConfiguration.getDoubleTapTimeout()) {
+                        mTouchTime = 0;
+                        mSlate.setZoomPos(0, 0);
+                        mSlate.setZoom(new Matrix());
+                    } else {
+                        mTouchTime = now;
+                    }
+                } else if (action == MotionEvent.ACTION_POINTER_DOWN) {
+                    mTouchTime = 0; // no double-tap for other fingers
+                }
             } else if (action == MotionEvent.ACTION_MOVE) {
                 if (mTouchPoint[0] < 0) {
                     mInitialZoomMatrix.set(mSlate.getZoom());
@@ -111,8 +126,14 @@ public class ZoomTouchView extends View {
                 }
 
                 float[] newCenter = getCenter(event, null);
-                mSlate.setZoomPos(mInitialPos[0] + newCenter[0] - mTouchPoint[0],
-                        mInitialPos[1] + newCenter[1] - mTouchPoint[1]);
+                final float dx = newCenter[0] - mTouchPoint[0];
+                final float dy = newCenter[1] - mTouchPoint[1];
+                mSlate.setZoomPos(mInitialPos[0] + dx,
+                        mInitialPos[1] + dy);
+
+                if (Math.hypot(dx, dy) > vc.getScaledTouchSlop()) {
+                    mTouchTime = 0; // no double tap now
+                }
             }
             if (DEBUG_OVERLAY) invalidate();
             return true;
