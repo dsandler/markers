@@ -302,8 +302,15 @@ public class ToolButton extends View {
     }
 
     public static class ZoomToolButton extends ToolButton {
+        public Bitmap icon;
+        public Rect frame;
+        public final RectF tmpRF = new RectF();
+
         public ZoomToolButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
+            
+            icon = BitmapFactory.decodeResource(getResources(), R.drawable.grabber);
+            frame = new Rect(0, 0, icon.getWidth(), icon.getHeight());
         }
         
         public ZoomToolButton(Context context, AttributeSet attrs) {
@@ -315,6 +322,25 @@ public class ToolButton extends View {
             super.activate();
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setZoomMode(this);
+        }
+        
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (mPaint == null) return;
+
+            float x = 0.5f*getWidth();
+            float y = 0.5f*getHeight();
+            float r = Math.min(getWidth()-getPaddingLeft()-getPaddingRight(),
+                             getHeight()-getPaddingTop()-getPaddingBottom()) * 0.5f;
+
+
+            int color = mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor());
+            mPaint.setColor(color);
+            mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+            tmpRF.set(x-r,y-r,x+r,y+r);
+
+            canvas.drawBitmap(icon, frame, tmpRF, mPaint);
         }
     }
 

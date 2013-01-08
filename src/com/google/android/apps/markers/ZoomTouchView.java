@@ -22,12 +22,14 @@ public class ZoomTouchView extends View {
     public static final boolean DEBUG_OVERLAY = DEBUG;
 
     private Slate mSlate;
-    private float[] mTouchPoint = new float[2];
+    private float[] mTouchPoint = new float[2]; // screen coordinates
+    private float[] mTouchPointDoc = new float[2]; // doc coordinates
     private double mInitialSpan = 1.0f;
 
     private float[] mInitialPos = new float[2];
 
     private Matrix mInitialZoomMatrix = new Matrix();
+    private Paint mZoomPaint;
 
     public ZoomTouchView(Context context) {
         this(context, null);
@@ -39,6 +41,9 @@ public class ZoomTouchView extends View {
 
     public ZoomTouchView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        
+        mZoomPaint = new Paint();
+        mZoomPaint.setTextSize(25f);
     }
 
     float[] getCenter(MotionEvent event, float[] pt) {
@@ -59,15 +64,13 @@ public class ZoomTouchView extends View {
     double getSpan(MotionEvent event) {
         int P = event.getPointerCount();
         if (P < 2) return 0;
-//        final int zero[] = { 0, 0 };
-//        getLocationOnScreen(zero);
+
         final double x0 = event.getX(0); // + zero[0];
         final double x1 = event.getX(1); // + zero[0];
         final double y0 = event.getY(0); // + zero[1];
         final double y1 = event.getY(1); // + zero[1];
         final double span = Math.hypot(x1 - x0, y1 - y0);
-        Log.v(TAG, String.format("zoom: p0=(%g,%g) p1=(%g,%g) span=%g",
-                x0, y0, x1, y1, span));
+
         return span; 
     }
 
@@ -81,38 +84,35 @@ public class ZoomTouchView extends View {
 
             if (action == MotionEvent.ACTION_DOWN
                     || action == MotionEvent.ACTION_POINTER_DOWN
-                    || action == MotionEvent.ACTION_POINTER_UP) {
-                mInitialZoomMatrix.set(mSlate.getZoom());
-                mSlate.getZoomPos(mInitialPos);
-                mInitialSpan = getSpan(event);
-                getCenter(event, mTouchPoint);
-                //currentM.mapPoints(pivot);
-                // pivot is now in the coordinate system of the view
-//                mSlate.setPivotX(pivot[0] - mSlate.getPivotX());
-//                mSlate.setPivotY(pivot[1] - mSlate.getPivotY());
-            } else if (action == MotionEvent.ACTION_UP) {
-                mTouchPoint[0] = mTouchPoint[1] = 0f;
+                    || action == MotionEvent.ACTION_POINTER_UP
+                    || action == MotionEvent.ACTION_UP) {
+                mTouchPoint[0] = mTouchPoint[1] = -1f;
             } else if (action == MotionEvent.ACTION_MOVE) {
+                if (mTouchPoint[0] < 0) {
+                    mInitialZoomMatrix.set(mSlate.getZoom());
+                    mSlate.getZoomPos(mInitialPos);
+
+                    mInitialSpan = getSpan(event);
+                    getCenter(event, mTouchPoint);
+                    mTouchPointDoc[0] = mTouchPoint[0] - mSlate.getZoomPosX();
+                    mTouchPointDoc[1] = mTouchPoint[1] - mSlate.getZoomPosY();
+                    mSlate.getZoomInv().mapPoints(mTouchPointDoc);
+                }
                 if (mInitialSpan != 0) {
                     double span = getSpan(event);
                     float scale = (float) (span / mInitialSpan);
-                    //Log.v(TAG, "span=" + span + " scale=" + scale);
+
                     if (scale != 0f) {
                         Matrix m = new Matrix(mInitialZoomMatrix);
-                        m.preScale(scale, scale, mTouchPoint[0], mTouchPoint[1]);
+
+                        m.preScale(scale, scale, mTouchPointDoc[0], mTouchPointDoc[1]);
                         mSlate.setZoom(m);
                     }
                 }
-                if (false&&mSlate.getScaleX() <= 1.0f) {
-//                    mSlate.setTranslationX(0);
-//                    mSlate.setTranslationY(0);
-//                    mSlate.setPivotX(0.5f * mSlate.getWidth());
-//                    mSlate.setPivotY(0.5f * mSlate.getHeight());
-                } else {
-                    float[] newCenter = getCenter(event, null);
-                    mSlate.setZoomPos(mInitialPos[0] + newCenter[0] - mTouchPoint[0],
-                            mInitialPos[1] + newCenter[1] - mTouchPoint[1]);
-                }
+
+                float[] newCenter = getCenter(event, null);
+                mSlate.setZoomPos(mInitialPos[0] + newCenter[0] - mTouchPoint[0],
+                        mInitialPos[1] + newCenter[1] - mTouchPoint[1]);
             }
             if (DEBUG_OVERLAY) invalidate();
             return true;
@@ -127,14 +127,29 @@ public class ZoomTouchView extends View {
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        if (!isEnabled()) return;
+        
+        final Matrix m = mSlate.getZoom();
+        final int x = (int) mSlate.getZoomPosX();
+        final int y = (int) mSlate.getZoomPosY();
+
+        final float scale = m.mapRadius(1f);
+        canvas.drawText(String.format("%d%% %+d,%+d",
+                            (int)(scale * 100f),
+                            x,
+                            y),
+                canvas.getWidth() - 200, canvas.getHeight() - 20, mZoomPaint);
+        
         if (!DEBUG_OVERLAY) return;
 
         setVisibility(View.VISIBLE);
-        canvas.drawColor(0xFFFFFF00);
+        //canvas.drawColor(0xFFFFFF00);
         setAlpha(0.5f);
         Paint pt = new Paint();
         pt.setFlags(Paint.ANTI_ALIAS_FLAG);
-        pt.setColor(0xFFFF0000);
+        pt.setTextSize(20f);
+        pt.setColor(0x80FF0000);
         if (mTouchPoint[0] != 0)
         canvas.drawCircle(mTouchPoint[0], mTouchPoint[1], 50 * (float) mSlate.getScaleX(), pt);
     }

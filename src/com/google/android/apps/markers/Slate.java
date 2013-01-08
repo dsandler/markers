@@ -28,6 +28,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
 import android.graphics.Point;
@@ -38,6 +39,7 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Region;
+import android.graphics.Region.Op;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -111,7 +113,9 @@ public class Slate extends View {
 
     private Region mDirtyRegion = new Region();
 
+    private Paint mWorkspacePaint;
     private Matrix mZoomMatrix = new Matrix();
+    private Matrix mZoomMatrixInv = new Matrix();
     private float mPanX = 0f, mPanY = 0f;
 
     public interface SlateListener {
@@ -129,7 +133,8 @@ public class Slate extends View {
         
         private float mLastPressure = -1f;
         private int mLastTool = 0;
-        
+        final float[] mTmpPoint = new float[2];
+
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
             mRenderer = new SmoothStroker();
@@ -148,8 +153,14 @@ public class Slate extends View {
 
             final float radius = lerp(mRadiusMin, mRadiusMax,
                     (float) Math.pow(pressureNorm, mPressureExponent));
+
+            mTmpPoint[0] = s.x - mPanX;
+            mTmpPoint[1] = s.y - mPanY;
+            mZoomMatrixInv.mapPoints(mTmpPoint);
             
-            final RectF dirtyF = mRenderer.strokeTo(mTiledCanvas, s.x, s.y, radius);
+            final RectF dirtyF = mRenderer.strokeTo(mTiledCanvas,
+                    mTmpPoint[0],
+                    mTmpPoint[1], radius);
             dirty(dirtyF);
 //            dirtyF.roundOut(tmpDirtyRect);
 //            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
@@ -466,6 +477,9 @@ public class Slate extends View {
             }
         }
         
+        mWorkspacePaint = new Paint();
+        mWorkspacePaint.setColor(0x40000000);
+
         if (true) {
             mDebugPaints[0] = new Paint();
             mDebugPaints[0].setStyle(Paint.Style.STROKE);
@@ -516,8 +530,13 @@ public class Slate extends View {
         return mZoomMatrix;
     }
 
+    public Matrix getZoomInv() {
+        return mZoomMatrixInv;
+    }
+
     public void setZoom(Matrix m) {
         mZoomMatrix.set(m);
+        mZoomMatrix.invert(mZoomMatrixInv);
     }
     
     public void setPenSize(float min, float max) {
@@ -543,6 +562,10 @@ public class Slate extends View {
             mPendingPaintBitmap = null;
         }
         mEmpty = true;
+
+        // reset the zoom when clearing
+        setZoom(new Matrix());
+        setZoomPos(0,0);
     }
 
     public int getDebugFlags() { return mDebugFlags; }
@@ -751,11 +774,17 @@ public class Slate extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mTiledCanvas != null) {
-            canvas.save();
-            Matrix m = new Matrix();
-//            m.preTranslate(mZoomPivotX, mZoomPivotY);
-            canvas.concat(mZoomMatrix);
-            canvas.translate(mPanX, mPanY);
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+
+            if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity()) {
+                canvas.translate(mPanX, mPanY);
+                canvas.concat(mZoomMatrix);
+
+                canvas.drawRect(-20000, -20000, 20000, 0, mWorkspacePaint);
+                canvas.drawRect(-20000, 0, 0, mTiledCanvas.getHeight(), mWorkspacePaint);
+                canvas.drawRect(mTiledCanvas.getWidth(), 0, 20000, mTiledCanvas.getHeight(), mWorkspacePaint);
+                canvas.drawRect(-20000, mTiledCanvas.getHeight(), 20000, 20000, mWorkspacePaint);
+            }
             
             if (!mDirtyRegion.isEmpty()) {
                 canvas.clipRegion(mDirtyRegion);
