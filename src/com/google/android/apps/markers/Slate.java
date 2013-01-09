@@ -113,6 +113,7 @@ public class Slate extends View {
 
     private Region mDirtyRegion = new Region();
 
+    private Paint mBlitPaint;
     private Paint mWorkspacePaint;
     private Matrix mZoomMatrix = new Matrix();
     private Matrix mZoomMatrixInv = new Matrix();
@@ -480,6 +481,8 @@ public class Slate extends View {
         mWorkspacePaint = new Paint();
         mWorkspacePaint.setColor(0x40000000);
 
+        mBlitPaint = new Paint();
+
         if (true) {
             mDebugPaints[0] = new Paint();
             mDebugPaints[0].setStyle(Paint.Style.STROKE);
@@ -790,7 +793,9 @@ public class Slate extends View {
                 canvas.clipRegion(mDirtyRegion);
                 mDirtyRegion.setEmpty();
             }
-            mTiledCanvas.drawTo(canvas, 0, 0, null, false); // @@ set to true for dirty tile updates
+            // TODO: tune this threshold based on the device density
+            mBlitPaint.setFilterBitmap(getScale(mZoomMatrix) < 3f);
+            mTiledCanvas.drawTo(canvas, 0, 0, mBlitPaint, false); // @@ set to true for dirty tile updates
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
@@ -801,6 +806,12 @@ public class Slate extends View {
                 mPressureCooker.drawDebug(canvas);
             }
         }
+    }
+
+    private static final float[] mvals = new float[9];
+    public static float getScale(Matrix m) {
+        m.getValues(mvals);
+        return mvals[0];
     }
 
     float dbgX = -1, dbgY = -1;

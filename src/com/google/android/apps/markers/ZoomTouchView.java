@@ -145,6 +145,12 @@ public class ZoomTouchView extends View {
         mSlate = slate;
     }
 
+    private static final float[] mvals = new float[9];
+    public static float getScale(Matrix m) {
+        m.getValues(mvals);
+        return mvals[0];
+    }
+
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -155,7 +161,8 @@ public class ZoomTouchView extends View {
         final int x = (int) mSlate.getZoomPosX();
         final int y = (int) mSlate.getZoomPosY();
 
-        final float scale = m.mapRadius(1f);
+        //final float scale = m.mapRadius(1f);
+        final float scale = getScale(m);
         canvas.drawText(String.format("%d%% %+d,%+d",
                             (int)(scale * 100f),
                             x,
