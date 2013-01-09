@@ -636,14 +636,19 @@ public class Slate extends View {
     }
 
     public Bitmap getBitmap() {
-        commitStroke();
-        // FIXME for tiling
-        return mTiledCanvas.toBitmap();
+        if (mTiledCanvas != null) {
+            commitStroke();
+            return mTiledCanvas.toBitmap();
+        }
+        return null;
     }
 
     public Bitmap copyBitmap(boolean withBackground) {
+        Bitmap newb = null;
         Bitmap b = getBitmap();
-        Bitmap newb = Bitmap.createBitmap(b.getWidth(), b.getHeight(), b.getConfig());
+        if (b != null) {
+            newb = Bitmap.createBitmap(b.getWidth(), b.getHeight(), b.getConfig());
+        }
         if (newb != null) {
             Canvas newc = new Canvas(newb);
             if (mBackgroundColor != Color.TRANSPARENT && withBackground) {
