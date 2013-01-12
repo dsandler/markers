@@ -19,8 +19,10 @@ import android.view.ViewConfiguration;
 public class ZoomTouchView extends View {
     public static final String TAG = Slate.TAG;
 
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
     public static final boolean DEBUG_OVERLAY = DEBUG;
+
+    public static final float DOUBLE_TAP_ZOOM_LEVEL = 4f;
 
     private Slate mSlate;
     private float[] mTouchPoint = new float[2]; // screen coordinates
@@ -76,6 +78,22 @@ public class ZoomTouchView extends View {
         return span; 
     }
 
+    private void doubleClick(MotionEvent event) {
+        final Matrix m = new Matrix();
+        mTouchPointDoc[0] = mTouchPointDoc[1] = 0f;
+        if (getScale(mSlate.getZoom()) == 1f) {
+            getCenter(event, mTouchPoint);
+            mTouchPointDoc[0] = mTouchPoint[0] - mSlate.getZoomPosX();
+            mTouchPointDoc[1] = mTouchPoint[1] - mSlate.getZoomPosY();
+            mSlate.getZoomInv().mapPoints(mTouchPointDoc);
+            m.preScale(DOUBLE_TAP_ZOOM_LEVEL, DOUBLE_TAP_ZOOM_LEVEL,
+                    mTouchPointDoc[0], mTouchPointDoc[1]);
+        }
+
+        mSlate.setZoomPos(0,0);
+        mSlate.setZoom(m);
+    }
+
     @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -94,8 +112,7 @@ public class ZoomTouchView extends View {
                     final long now = event.getEventTime();
                     if (now - mTouchTime < ViewConfiguration.getDoubleTapTimeout()) {
                         mTouchTime = 0;
-                        mSlate.setZoomPos(0, 0);
-                        mSlate.setZoom(new Matrix());
+                        doubleClick(event);
                     } else {
                         mTouchTime = now;
                     }
