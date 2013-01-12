@@ -28,6 +28,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -40,7 +41,7 @@ import android.view.accessibility.AccessibilityEvent;
 
 import org.dsandler.apps.markers.R;
 
-public class ToolButton extends View {
+public class ToolButton extends View implements View.OnLongClickListener, View.OnClickListener {
     public static class ToolCallback {
         public void setZoomMode(ToolButton me) {}
         public void setPenMode(ToolButton me, float min, float max) {}
@@ -48,12 +49,10 @@ public class ToolButton extends View {
         public void setBackgroundColor(ToolButton me, int color) {}
         public void restore(ToolButton me) {}
         public void setPenType(ToolButton penTypeButton, int penType) {}
+        public void resetZoom(ToolButton zoomToolButton) { }
     }
 
-    // Enable a delay here to use "shifted" mode, where longpressing a tool will only assert that
-    // tool until you lift your finger
-    //    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 300; // ms
-    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 0; // ms
+    private static boolean EPHEMERAL_TOOLS = false;
     
     private ToolCallback mCallback;
     private long mDownTime;
@@ -61,23 +60,8 @@ public class ToolButton extends View {
     protected Paint mPaint;
     protected ColorStateList mFgColor, mBgColor;
 
-    private Runnable mLongPressHandler = new Runnable() {
-        @Override
-        public void run() {
-            if (Slate.DEBUG) {
-                Log.d(Slate.TAG, "longpress on " + ToolButton.this + " pressed=" + isPressed());
-            }
-            if (isPressed()) {
-                if (onLongClick(ToolButton.this)) {
-                    deactivate();
-                    invalidate();
-                }
-            }
-        }
-    };
-
     public ToolButton(Context context) {
-        super(context);
+        this(context, null, 0);
     }
 
     public ToolButton(Context context, AttributeSet attrs) {
@@ -145,11 +129,6 @@ public class ToolButton extends View {
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
         }
-    }
-
-    protected boolean onLongClick(View v) {
-        // do nothing
-        return false;
     }
 
     public static class PenTypeButton extends ToolButton {
@@ -294,7 +273,7 @@ public class ToolButton extends View {
         }
 
         @Override
-        protected boolean onLongClick(View v) {
+        public boolean onLongClick(View v) {
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setBackgroundColor(this, color);
             return true;
@@ -323,7 +302,7 @@ public class ToolButton extends View {
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setZoomMode(this);
         }
-        
+
         @Override
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
@@ -342,12 +321,21 @@ public class ToolButton extends View {
 
             canvas.drawBitmap(icon, frame, tmpRF, mPaint);
         }
+
+        @Override
+        public boolean onLongClick(View v) {
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.resetZoom(this);
+            return true;
+        }
     }
 
     public ToolButton(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         setClickable(true);
+        setOnClickListener(this);
+        setOnLongClickListener(this);
     }
     
     void setCallback(ToolCallback cb) {
@@ -376,36 +364,31 @@ public class ToolButton extends View {
         setPressed(false);
         setSelected(true);
     }
-    
+
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        final int action = event.getAction();
-        
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                if (Slate.DEBUG) Log.d(Slate.TAG, "DOWN on " + ToolButton.this + " lph=" + mLongPressHandler);
-                postDelayed(mLongPressHandler, ViewConfiguration.getLongPressTimeout());
-                mDownTime = event.getEventTime();
-                setPressed(true);
-                invalidate();
-                return true;
-            case MotionEvent.ACTION_UP:
-                if (isPressed()) {
-                    if (!isSelected()) {
-                        activate();
-                        commit();
-                    }
-                    invalidate();
-                }
-                removeCallbacks(mLongPressHandler);
-                return true;
-            case MotionEvent.ACTION_CANCEL:
-                removeCallbacks(mLongPressHandler);
-                return true;
-        }
+    public void onClick(View view) {
+        activate();
+        commit();
+    }
+
+    @Override
+    public boolean onLongClick(View view) {
         return false;
     }
-    
+
+    // the following overrides are in place until I fix up the backgrounds to just use statelist drawables
+    @Override
+    public void setPressed(boolean pressed) {
+        super.setPressed(pressed);
+        invalidate();
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         canvas.drawColor(mBgColor.getColorForState(getDrawableState(), mBgColor.getDefaultColor()));

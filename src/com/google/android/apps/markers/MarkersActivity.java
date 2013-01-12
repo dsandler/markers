@@ -37,10 +37,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.PixelFormat;
-import android.graphics.Typeface;
+import android.graphics.*;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
@@ -321,6 +318,12 @@ public class MarkersActivity extends Activity
                         .commit();
                 }
             }
+
+            @Override
+            public void resetZoom(ToolButton tool) {
+                mSlate.setZoomPos(0,0);
+                mSlate.setZoom(new Matrix());
+            }
         };
         
         descend((ViewGroup) mColorsView, new ViewFunc() {
@@ -470,8 +473,9 @@ public class MarkersActivity extends Activity
     protected void onStart() {
         super.onStart();
         Intent startIntent = getIntent();
-        if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
         String a = startIntent.getAction();
+        if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " action=" + a + " extras=" + dumpBundle(startIntent.getExtras()));
+        if (a == null) return;
         if (a.equals(Intent.ACTION_EDIT)) {
             // XXX: what happens to the old drawing? we should really move to auto-save
             mSlate.clear();
