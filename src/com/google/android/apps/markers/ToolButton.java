@@ -16,18 +16,12 @@
 
 package com.google.android.apps.markers;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.Rect;
-import android.graphics.RectF;
+import android.graphics.*;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -39,6 +33,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.accessibility.AccessibilityEvent;
 
+import android.widget.FrameLayout;
 import org.dsandler.apps.markers.R;
 
 public class ToolButton extends View implements View.OnLongClickListener, View.OnClickListener {
@@ -85,14 +80,24 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
             TypedArray a = context.obtainStyledAttributes(attrs, 
                     R.styleable.PenToolButton, defStyle, 0);
             
-            strokeWidthMin = a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1);
-            strokeWidthMax = a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10);
+            setWidths(a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1),
+                      a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10));
             
             a.recycle();
         }
         
         public PenToolButton(Context context, AttributeSet attrs) {
             this(context, attrs, 0);
+        }
+
+        public void setWidths(float min, float max) {
+            strokeWidthMin = min;
+            strokeWidthMax = max;
+            invalidate();
+            if (isSelected()) {
+                // assume activated
+                activate();
+            }
         }
         
         @Override
@@ -107,19 +112,20 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
             super.onDraw(canvas);
             
             mPaint.setColor(mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor()));
-            
+            final boolean vertical = getHeight() > getWidth();
+
             float r1 = strokeWidthMin * 0.5f;
             float r2 = strokeWidthMax * 0.5f;
-            
-            final boolean vertical = getHeight() > getWidth();
-            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
-            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+
             final float center = (vertical ? getWidth() : getHeight()) / 2;
-            final float iter = 1f / (vertical ? getHeight() : getWidth());
-            final float amplitude = (center-r2)*0.5f;
 
             if (r1 > center) r1 = center;
             if (r2 > center) r2 = center;
+
+            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
+            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+            final float iter = 1f / (vertical ? getHeight() : getWidth());
+            final float amplitude = (center-r2)*0.5f;
 
             for (float f = 0f; f < 1.0f; f += iter) {
                 final float y = Slate.lerp(start, end, f);
@@ -128,6 +134,26 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
                 canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, mPaint);
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
+
+            if (r2 == center) {
+                mPaint.setColor(Color.WHITE);
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(r2/2);
+                canvas.drawText("" + (int) strokeWidthMax, vertical ? center : end, -5 + r2/4 + (vertical ? end : center), mPaint);
+            }
+        }
+        
+        @Override
+        public boolean onLongClick(View view) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            final View layout =
+                    inflate(getContext(), R.layout.pen_editor, null);
+            builder.setView(layout);
+            final PenWidthEditorView editor = (PenWidthEditorView) layout.findViewById(R.id.editor);
+            editor.setTool((PenToolButton) view);
+            AlertDialog dlg = builder.create();
+            dlg.show();
+            return true;
         }
     }
 

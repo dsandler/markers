@@ -972,7 +972,11 @@ public class Slate extends View {
     public static float lerp(float a, float b, float f) {
         return a + f * (b - a);
     }
-    
+
+    public static float clamp(float a, float b, float f) {
+        return f < a ? a : (f > b ? b : f);
+    }
+
     @Override
     public void invalidate(Rect r) {
         if (r.isEmpty()) {
