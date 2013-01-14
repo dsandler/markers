@@ -18,6 +18,7 @@ package com.google.android.apps.markers;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
@@ -54,6 +55,7 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
     
     protected Paint mPaint;
     protected ColorStateList mFgColor, mBgColor;
+    SharedPreferences mPrefs;
 
     public ToolButton(Context context) {
         this(context, null, 0);
@@ -72,6 +74,9 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
     }
     
     public static class PenToolButton extends ToolButton {
+        private static final String PREF_STROKE_MIN = ":min";
+        private static final String PREF_STROKE_MAX = ":max";
+
         public float strokeWidthMin, strokeWidthMax;
 
         public PenToolButton(Context context, AttributeSet attrs, int defStyle) {
@@ -79,10 +84,14 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
 
             TypedArray a = context.obtainStyledAttributes(attrs, 
                     R.styleable.PenToolButton, defStyle, 0);
-            
-            setWidths(a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1),
-                      a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10));
-            
+
+            final float min = mPrefs.getFloat(getId() + PREF_STROKE_MIN,
+                        a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1));
+            final float max = mPrefs.getFloat(getId() + PREF_STROKE_MAX,
+                        a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10));
+
+            setWidths(min, max);
+
             a.recycle();
         }
         
@@ -91,12 +100,18 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
         }
 
         public void setWidths(float min, float max) {
-            strokeWidthMin = min;
-            strokeWidthMax = max;
-            invalidate();
-            if (isSelected()) {
-                // assume activated
-                activate();
+            if (min != strokeWidthMin || max != strokeWidthMax) {
+                strokeWidthMin = min;
+                strokeWidthMax = max;
+                invalidate();
+                if (isSelected()) {
+                    // assume activated
+                    activate();
+                }
+                SharedPreferences.Editor edit = mPrefs.edit();
+                edit.putFloat(getId() + PREF_STROKE_MIN, min);
+                edit.putFloat(getId() + PREF_STROKE_MAX, max);
+                edit.apply();
             }
         }
         
@@ -139,7 +154,8 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
                 mPaint.setColor(Color.WHITE);
                 mPaint.setTextAlign(Paint.Align.CENTER);
                 mPaint.setTextSize(r2/2);
-                canvas.drawText("" + (int) strokeWidthMax, vertical ? center : end, -5 + r2/4 + (vertical ? end : center), mPaint);
+                final String maxStr = String.format("%.0f", strokeWidthMax);
+                canvas.drawText(maxStr, vertical ? center : end, -5 + r2/4 + (vertical ? end : center), mPaint);
             }
         }
         
@@ -358,6 +374,8 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
 
     public ToolButton(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+
+        mPrefs = context.getSharedPreferences("ToolButton", Context.MODE_PRIVATE);
 
         setClickable(true);
         setOnClickListener(this);
