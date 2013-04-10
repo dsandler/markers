@@ -61,6 +61,7 @@ public class Slate extends View {
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 2;
+    public static final int FLAG_DEBUG_TILES = 1 << 3;
     public static final int FLAG_DEBUG_EVERYTHING = ~0;
     
     public static final int MAX_POINTERS = 10;
@@ -502,6 +503,13 @@ public class Slate extends View {
 
     public boolean isEmpty() { return mEmpty; }
 
+    public void resetZoom() {
+        mPanX = mPanY = 0;
+        final Matrix m = new Matrix();
+        m.postScale(1f/DENSITY, 1f/DENSITY);
+        setZoom(m);
+    }
+
     public void setZoomPos(float x, float y) {
         mPanX = x;
         mPanY = y;
@@ -567,14 +575,14 @@ public class Slate extends View {
         mEmpty = true;
 
         // reset the zoom when clearing
-        setZoom(new Matrix());
-        setZoomPos(0,0);
+        resetZoom();
     }
 
     public int getDebugFlags() { return mDebugFlags; }
     public void setDebugFlags(int f) {
         if (f != mDebugFlags) {
             mDebugFlags = f;
+            mTiledCanvas.setDebug(0 != (f & FLAG_DEBUG_TILES));
             invalidate();
         }
     }
@@ -703,23 +711,9 @@ public class Slate extends View {
         invalidate();
     }
 
-    public Bitmap getBitmap() {
-        commitStroke();
-        // FIXME for tiling
-        return mTiledCanvas.toBitmap();
-    }
-
     public Bitmap copyBitmap(boolean withBackground) {
-        Bitmap b = getBitmap();
-        Bitmap newb = Bitmap.createBitmap(b.getWidth(), b.getHeight(), b.getConfig());
-        if (newb != null) {
-            Canvas newc = new Canvas(newb);
-            if (mBackgroundColor != Color.TRANSPARENT && withBackground) {
-                newc.drawColor(mBackgroundColor);
-            }
-            newc.drawBitmap(b, 0, 0, null);
-        }
-        return newb;
+        commitStroke();
+        return mTiledCanvas.toBitmap(withBackground ? mBackgroundColor : 0);
     }
 
     public void setBitmap(Bitmap b) {
@@ -757,12 +751,15 @@ public class Slate extends View {
         }
     }
     
+    static final int DENSITY = 2;
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
         if (mTiledCanvas != null) return;
         
-        mTiledCanvas = new TiledBitmapCanvas(w, h, Bitmap.Config.ARGB_8888);
+        mTiledCanvas = new TiledBitmapCanvas(
+            DENSITY*w, 
+            DENSITY*h, Bitmap.Config.ARGB_8888);
         if (mTiledCanvas == null) {
             throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
         }
@@ -772,6 +769,8 @@ public class Slate extends View {
             mPendingPaintBitmap = null;
             paintBitmap(b);
         }
+
+        resetZoom();
     }
 
     @Override

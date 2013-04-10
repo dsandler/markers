@@ -321,8 +321,7 @@ public class MarkersActivity extends Activity
 
             @Override
             public void resetZoom(ToolButton tool) {
-                mSlate.setZoomPos(0,0);
-                mSlate.setZoom(new Matrix());
+                mSlate.resetZoom();
             }
         };
         
