@@ -15,11 +15,11 @@ public class TiledBitmapCanvas implements CanvasLite {
 
     public static final int DEFAULT_TILE_SIZE = 256;
     private static final float INVALIDATE_PADDING = 4.0f;
-
-    public static final int MAX_VERSIONS = 10;
+    public static final int DEFAULT_NUM_VERSIONS = 10;
 
     private boolean mDebug = false;
     private int mTileSize = DEFAULT_TILE_SIZE;
+    private int mMaxVersions = DEFAULT_NUM_VERSIONS;
 
     private class Tile {
         private class Version {
@@ -56,7 +56,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         public Tile(int x, int y, int version) {
             this.x = x;
             this.y = y;
-            versions = new ArrayList<Version>(MAX_VERSIONS);
+            versions = new ArrayList<Version>(mMaxVersions);
             bottom = version;
             createVersion(version); // sets top
             if (top < 0) {
@@ -66,7 +66,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         private Version createVersion(int version) {
             Version v;
             final int N = versions.size();
-            if (N == MAX_VERSIONS) {
+            if (N == mMaxVersions) {
                 // recycle the last version object & bitmap
                 v = versions.get(N-1);
                 versions.remove(N-1);
@@ -177,24 +177,30 @@ public class TiledBitmapCanvas implements CanvasLite {
                 mBottomVersion = 0;
     private boolean mVersionInUse = false;
 
-    public TiledBitmapCanvas() {
-    }
-
-    public TiledBitmapCanvas(int tileSize) {
-        mTileSize = tileSize;
-    }
-
-    public TiledBitmapCanvas(Bitmap bitmap) {
+    public TiledBitmapCanvas(Bitmap bitmap, int tileSize, int maxVersions) {
         mWidth = bitmap.getWidth();
         mHeight = bitmap.getHeight();
         mConfig = bitmap.getConfig();
+        mTileSize = tileSize;
+        mMaxVersions = maxVersions;
         load(bitmap);
     }
-    public TiledBitmapCanvas(int w, int h, Bitmap.Config config) {
+
+    public TiledBitmapCanvas(Bitmap bitmap) {
+        this(bitmap, DEFAULT_TILE_SIZE, DEFAULT_NUM_VERSIONS);
+    }
+
+    public TiledBitmapCanvas(int w, int h, Bitmap.Config config, int tileSize, int maxVersions) {
         mWidth = w;
         mHeight = h;
         mConfig = config;
+        mTileSize = tileSize;
+        mMaxVersions = maxVersions;
         load(null);
+    }
+
+    public TiledBitmapCanvas(int w, int h, Bitmap.Config config) {
+        this(w, h, config, DEFAULT_TILE_SIZE, DEFAULT_NUM_VERSIONS);
     }
 
     public void setDebug(boolean d) {
@@ -386,7 +392,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         if (!mVersionInUse) return;
 
         mNewVersion++; // one more than top
-        if (mNewVersion - mBottomVersion > MAX_VERSIONS) {
+        if (mNewVersion - mBottomVersion > mMaxVersions) {
             mBottomVersion++;
         }
         mVersionInUse = false;

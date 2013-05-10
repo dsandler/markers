@@ -119,6 +119,8 @@ public class Slate extends View {
     private Matrix mZoomMatrix = new Matrix();
     private Matrix mZoomMatrixInv = new Matrix();
     private float mPanX = 0f, mPanY = 0f;
+    private int mMemClass;
+    private boolean mLowMem;
 
     public interface SlateListener {
         void strokeStarted();
@@ -428,16 +430,15 @@ public class Slate extends View {
         mEmpty = true;
 
         // setup brush bitmaps
-        final int memClass;
         final ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            memClass = am.getLargeMemoryClass();
+            mMemClass = am.getLargeMemoryClass();
         } else {
-            memClass = am.getMemoryClass();
+            mMemClass = am.getMemoryClass();
         }
-        final boolean lowMem = (memClass <= 16);
-        if (DEBUG) {
-            Log.v(TAG, "Slate.init: memClass=" + memClass + (lowMem ? " LOW" : ""));
+        mLowMem = (mMemClass <= 16);
+        if (true||DEBUG) {
+            Log.v(TAG, "Slate.init: memClass=" + mMemClass + (mLowMem ? " (LOW)" : ""));
         }
 
         final Resources res = getContext().getResources();
@@ -448,7 +449,7 @@ public class Slate extends View {
 
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
-        if (lowMem) { // let's see how this works in practice
+        if (mLowMem) { // let's see how this works in practice
             opts.inSampleSize = 4;
         }
         mAirbrushBits = BitmapFactory.decodeResource(res, R.drawable.airbrush_light, opts);
@@ -716,26 +717,26 @@ public class Slate extends View {
         return mTiledCanvas.toBitmap(withBackground ? mBackgroundColor : 0);
     }
 
-    public void setBitmap(Bitmap b) {
-        if (b == null) return;
-        
-        mTiledCanvas.recycleBitmaps();
-        mTiledCanvas = new TiledBitmapCanvas(b);
-        mEmpty = false;
-        
-        // XXX FIXME for tiling
-
-        if (DEBUG) { 
-            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
-        }
-        // mTiledCanvas.drawBitmap(b, 0, 0, null);
-
-        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mTiledCanvas=%s",
-            b.toString(), b.getWidth(), b.getHeight(),
-            mTiledCanvas.toString()));
-
-        mEmpty = false;
-    }
+//    public void setBitmap(Bitmap b) {
+//        if (b == null) return;
+//
+//        mTiledCanvas.recycleBitmaps();
+//        mTiledCanvas = new TiledBitmapCanvas(b);
+//        mEmpty = false;
+//
+//        // XXX FIXME for tiling
+//
+//        if (DEBUG) {
+//            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
+//        }
+//        // mTiledCanvas.drawBitmap(b, 0, 0, null);
+//
+//        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mTiledCanvas=%s",
+//            b.toString(), b.getWidth(), b.getHeight(),
+//            mTiledCanvas.toString()));
+//
+//        mEmpty = false;
+//    }
 
     public void setPenColor(int color) {
         for (MarkersPlotter plotter : mStrokes) {
@@ -756,10 +757,35 @@ public class Slate extends View {
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
         if (mTiledCanvas != null) return;
-        
+
+        final int widthPx = DENSITY*w;
+        final int heightPx = DENSITY*h;
+        final int bytesPerCanvas = widthPx * heightPx * 4;
+        int numVersions = TiledBitmapCanvas.DEFAULT_NUM_VERSIONS;
+        final int memCeiling = (mMemClass * 1024 * 1024);
+        if (bytesPerCanvas * (numVersions + 2) > memCeiling) {
+            numVersions = memCeiling / bytesPerCanvas - 2;
+        }
+        if (numVersions < 1) { // uh get some RAM already
+            numVersions = 1;
+        }
+
+        Log.v(TAG, String.format(
+                "About to init tiled %dx canvas: %dx%d x 32bpp x %d = %d bytes (ceiling: %d)",
+                DENSITY,
+                widthPx,
+                heightPx,
+                numVersions,
+                widthPx * heightPx * 4 * numVersions,
+                memCeiling
+                ));
         mTiledCanvas = new TiledBitmapCanvas(
-            DENSITY*w, 
-            DENSITY*h, Bitmap.Config.ARGB_8888);
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888,
+            TiledBitmapCanvas.DEFAULT_TILE_SIZE,
+            numVersions
+            );
         if (mTiledCanvas == null) {
             throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
         }
