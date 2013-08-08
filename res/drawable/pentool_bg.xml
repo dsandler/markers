@@ -14,10 +14,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<resources>
-    <dimen name="action_bar_height">56dip</dimen>
-    <dimen name="action_bar_logo_width">96dip</dimen>
-    <!-- pre-JB xlarge devices have no top status bar -->
-    <dimen name="status_bar_height">0dp</dimen>
-    <dimen name="tools_margin_top">48dp</dimen>
-</resources>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"  android:color="@color/btn_pressed_bg" />
+    <item android:state_selected="true" android:color="@color/btn_selected_bg" />
+    <item                               android:color="@color/btn_bg" />
+</selector>

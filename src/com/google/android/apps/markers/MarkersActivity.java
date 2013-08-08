@@ -37,10 +37,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.PixelFormat;
-import android.graphics.Typeface;
+import android.graphics.*;
 import android.media.MediaScannerConnection;
 import android.media.MediaScannerConnection.MediaScannerConnectionClient;
 import android.net.Uri;
@@ -90,6 +87,7 @@ public class MarkersActivity extends Activity
     private boolean mJustLoadedImage = false;
 
     private Slate mSlate;
+    private ZoomTouchView mZoomView;
 
     private ToolButton mLastTool, mActiveTool;
     private ToolButton mLastColor, mActiveColor;
@@ -226,6 +224,11 @@ public class MarkersActivity extends Activity
         }
         final ViewGroup root = ((ViewGroup)findViewById(R.id.root));
         root.addView(mSlate, 0);
+        mZoomView = new ZoomTouchView(this);
+        mZoomView.setSlate(mSlate);
+        mZoomView.setEnabled(false);
+        mZoomView.setAlpha(0);
+        root.addView(mZoomView, 0);
         
         mMediaScannerConnection =
                 new MediaScannerConnection(MarkersActivity.this, mMediaScannerClient); 
@@ -253,6 +256,8 @@ public class MarkersActivity extends Activity
         final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
             @Override
             public void setPenMode(ToolButton tool, float min, float max) {
+                mSlate.setZoomMode(false);
+                mZoomView.setEnabled(false);
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
                 mActiveTool = tool;
@@ -300,6 +305,24 @@ public class MarkersActivity extends Activity
             public void setBackgroundColor(ToolButton tool, int color) {
                 mSlate.setDrawingBackground(color);
             }
+            @Override
+            public void setZoomMode(ToolButton me) {
+                mSlate.setZoomMode(true);
+                mZoomView.setEnabled(true);
+                mLastTool = mActiveTool;
+                mActiveTool = me;
+                
+                if (mLastTool != mActiveTool) {
+                    mLastTool.deactivate();
+                    mPrefs.edit().putString(PREF_LAST_TOOL, (String) mActiveTool.getTag())
+                        .commit();
+                }
+            }
+
+            @Override
+            public void resetZoom(ToolButton tool) {
+                mSlate.resetZoom();
+            }
         };
         
         descend((ViewGroup) mColorsView, new ViewFunc() {
@@ -311,7 +334,10 @@ public class MarkersActivity extends Activity
                 }
             }
         });
-        
+
+        final ToolButton zoomButton = (ToolButton) findViewById(R.id.tool_zoom);
+        zoomButton.setCallback(toolCB);
+
         final ToolButton penThinButton = (ToolButton) findViewById(R.id.pen_thin);
         penThinButton.setCallback(toolCB);
 
@@ -446,8 +472,9 @@ public class MarkersActivity extends Activity
     protected void onStart() {
         super.onStart();
         Intent startIntent = getIntent();
-        if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
         String a = startIntent.getAction();
+        if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " action=" + a + " extras=" + dumpBundle(startIntent.getExtras()));
+        if (a == null) return;
         if (a.equals(Intent.ACTION_EDIT)) {
             // XXX: what happens to the old drawing? we should really move to auto-save
             mSlate.clear();
@@ -490,6 +517,10 @@ public class MarkersActivity extends Activity
 
     @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
+        mSlate.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | (show ? 0 : View.SYSTEM_UI_FLAG_FULLSCREEN)
+        );
         if (!show) {
             if (hasAnimations() && animate) {
                 AnimatorSet a = new AnimatorSet();

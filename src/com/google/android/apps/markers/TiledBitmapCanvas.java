@@ -1,30 +1,25 @@
 package com.google.android.apps.markers;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
-import android.graphics.Bitmap;
+import android.graphics.*;
 import android.graphics.Bitmap.Config;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.util.FloatMath;
 import android.util.Log;
 
 public class TiledBitmapCanvas implements CanvasLite {
-    public static final boolean DEBUG = false;
-    public static final boolean DEBUG_TILES_ON_COMMIT = false;
     public static final String TAG = "Markers/TiledBitmapCanvas";
+
+    public static final boolean DEBUG_TILES_ON_COMMIT = false;
+    private static final boolean DEBUG_VERBOSE = false;
 
     public static final int DEFAULT_TILE_SIZE = 256;
     private static final float INVALIDATE_PADDING = 4.0f;
+    public static final int DEFAULT_NUM_VERSIONS = 10;
 
-    public static final int MAX_VERSIONS = 10;
-
+    private boolean mDebug = false;
     private int mTileSize = DEFAULT_TILE_SIZE;
+    private int mMaxVersions = DEFAULT_NUM_VERSIONS;
 
     private class Tile {
         private class Version {
@@ -61,7 +56,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         public Tile(int x, int y, int version) {
             this.x = x;
             this.y = y;
-            versions = new ArrayList<Version>(MAX_VERSIONS);
+            versions = new ArrayList<Version>(mMaxVersions);
             bottom = version;
             createVersion(version); // sets top
             if (top < 0) {
@@ -71,7 +66,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         private Version createVersion(int version) {
             Version v;
             final int N = versions.size();
-            if (N == MAX_VERSIONS) {
+            if (N == mMaxVersions) {
                 // recycle the last version object & bitmap
                 v = versions.get(N-1);
                 versions.remove(N-1);
@@ -91,7 +86,7 @@ public class TiledBitmapCanvas implements CanvasLite {
             }
             versions.add(0, v);
             top = version;
-            if (DEBUG) {
+            if (mDebug && DEBUG_VERBOSE) {
                 Log.v(TAG, String.format("createVersion %d: [%2d,%2d] %s", version, x, y, debugVersions()));
             }
             return v;
@@ -100,7 +95,7 @@ public class TiledBitmapCanvas implements CanvasLite {
             // short path
             if (version >= top) return 0;
             if (version < bottom) return -1;
-            if (DEBUG) {
+            if (mDebug) {
                 if (versions.size() > 0 && top != versions.get(0).version) {
                     Log.e(TAG, String.format("internal inconsistency: tile (%d,%d) top=%d but version[0]=%d",
                             x, y, top, versions.get(0).version));
@@ -163,7 +158,7 @@ public class TiledBitmapCanvas implements CanvasLite {
             if (i > 0) {
                 versions.subList(0, i).clear();
                 final int oldTop = top;
-                if (DEBUG) {
+                if (mDebug) {
                     Log.v(TAG, String.format("   tile [%2d,%2d]: revert(%d) old top %d, %s",
                             x, y, toVersion, oldTop,
                             debugVersions()));
@@ -182,24 +177,34 @@ public class TiledBitmapCanvas implements CanvasLite {
                 mBottomVersion = 0;
     private boolean mVersionInUse = false;
 
-    public TiledBitmapCanvas() {
-    }
-
-    public TiledBitmapCanvas(int tileSize) {
-        mTileSize = tileSize;
-    }
-
-    public TiledBitmapCanvas(Bitmap bitmap) {
+    public TiledBitmapCanvas(Bitmap bitmap, int tileSize, int maxVersions) {
         mWidth = bitmap.getWidth();
         mHeight = bitmap.getHeight();
         mConfig = bitmap.getConfig();
+        mTileSize = tileSize;
+        mMaxVersions = maxVersions;
         load(bitmap);
     }
-    public TiledBitmapCanvas(int w, int h, Bitmap.Config config) {
+
+    public TiledBitmapCanvas(Bitmap bitmap) {
+        this(bitmap, DEFAULT_TILE_SIZE, DEFAULT_NUM_VERSIONS);
+    }
+
+    public TiledBitmapCanvas(int w, int h, Bitmap.Config config, int tileSize, int maxVersions) {
         mWidth = w;
         mHeight = h;
         mConfig = config;
+        mTileSize = tileSize;
+        mMaxVersions = maxVersions;
         load(null);
+    }
+
+    public TiledBitmapCanvas(int w, int h, Bitmap.Config config) {
+        this(w, h, config, DEFAULT_TILE_SIZE, DEFAULT_NUM_VERSIONS);
+    }
+
+    public void setDebug(boolean d) {
+        mDebug = d;
     }
 
     public void recycleBitmaps() {
@@ -311,26 +316,28 @@ public class TiledBitmapCanvas implements CanvasLite {
         }
     }
 
+    private static Paint dbgPaint = new Paint(0);
+    private static Paint dbgStroke = new Paint(0);
+    private static Paint dbgTextPaint = new Paint(0);
+    static {
+        dbgStroke.setColor(0x80000000);
+        dbgStroke.setStrokeWidth(3.0f);
+        dbgStroke.setStyle(Paint.Style.STROKE);
+        dbgTextPaint.setColor(0x80000000);
+        dbgTextPaint.setTextSize(20.0f);
+    }
     private int mDrawCount = 0;
-    private Paint dbgPaint = new Paint();
-    private Paint dbgStroke = new Paint();
-    private Paint dbgTextPaint = new Paint();
 
     final static int DEBUG_COLORS[] = {
-        0x40FF0000, 0x40FFFF00, 0x4000FF00, 0x400000FF, 0x40FF00FF
+        0x40FF0000, 0x40FFFF00, 0x4000FF00, 0x400000FF, 0x40FF00FF,
+        0x40AA0000, 0x40AAAA00, 0x4000AA00, 0x400000AA, 0x40AA00AA,
+        0x40770000, 0x40777700, 0x40007700, 0x40000077, 0x40770077,
     };
 
     @Override
     public void drawTo(Canvas drawCanvas, float left, float top, Paint paint, boolean onlyDirty) {
         final Rect src = new Rect(0, 0, mTileSize, mTileSize);
         final Rect dst = new Rect(0, 0, mTileSize, mTileSize);
-        if (DEBUG) {
-            dbgStroke.setColor(0x80000000);
-            dbgStroke.setStrokeWidth(3.0f);
-            dbgStroke.setStyle(Paint.Style.STROKE);
-            dbgTextPaint.setColor(0x80000000);
-            dbgTextPaint.setTextSize(12.0f);
-        }
         drawCanvas.save();
         drawCanvas.translate(-left, -top);
         drawCanvas.clipRect(0, 0, mWidth, mHeight);
@@ -342,12 +349,12 @@ public class TiledBitmapCanvas implements CanvasLite {
                 if (!onlyDirty || tile.dirty) {
                     drawCanvas.drawBitmap(tile.getBitmap(), src, dst, paint);
                     tile.dirty = false;
-                    if (DEBUG) {
+                    if (mDebug) {
                         mDrawCount++;
                         dbgPaint.setColor(DEBUG_COLORS[tile.top % DEBUG_COLORS.length]);
                         //drawCanvas.drawRect(dst, (mDrawCount % 2 == 0) ? dbgPaint1 : dbgPaint2);
                         drawCanvas.drawRect(dst, dbgPaint);
-                        drawCanvas.drawRect(dst, dbgStroke);
+                        //drawCanvas.drawRect(dst, dbgStroke);
                         drawCanvas.drawText(
                                 String.format("%d,%d v%d", tile.x, tile.y, tile.top),
                                 dst.left + 4, dst.bottom - 4, dbgTextPaint);
@@ -366,8 +373,17 @@ public class TiledBitmapCanvas implements CanvasLite {
     }
     
     public Bitmap toBitmap() {
+        return toBitmap(0);
+    }
+
+    public Bitmap toBitmap(int bgcolor) {
         Bitmap bitmap = Bitmap.createBitmap(mWidth, mHeight, mConfig);
         Canvas canvas = new Canvas(bitmap);
+
+        if (bgcolor != Color.TRANSPARENT) {
+            canvas.drawColor(bgcolor);
+        }
+
         drawTo(canvas, 0, 0, null, false);
         return bitmap;
     }
@@ -376,7 +392,7 @@ public class TiledBitmapCanvas implements CanvasLite {
         if (!mVersionInUse) return;
 
         mNewVersion++; // one more than top
-        if (mNewVersion - mBottomVersion > MAX_VERSIONS) {
+        if (mNewVersion - mBottomVersion > mMaxVersions) {
             mBottomVersion++;
         }
         mVersionInUse = false;
@@ -400,7 +416,7 @@ public class TiledBitmapCanvas implements CanvasLite {
             if (newTop == mBottomVersion) return; // we're already at the end
             newTop = mBottomVersion;
         }
-        if (DEBUG) {
+        if (mDebug) {
             Log.v(TAG, String.format("step(%d): oldTop=%d newTop=%d bot=%d", delta, 
                     oldTop, newTop, mBottomVersion));
         }

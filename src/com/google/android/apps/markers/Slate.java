@@ -28,14 +28,18 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Region;
+import android.graphics.Region.Op;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -57,6 +61,7 @@ public class Slate extends View {
     public static final int FLAG_DEBUG_STROKES = 1;
     public static final int FLAG_DEBUG_PRESSURE = 1 << 1;
     public static final int FLAG_DEBUG_INVALIDATES = 1 << 2;
+    public static final int FLAG_DEBUG_TILES = 1 << 3;
     public static final int FLAG_DEBUG_EVERYTHING = ~0;
     
     public static final int MAX_POINTERS = 10;
@@ -93,7 +98,7 @@ public class Slate extends View {
     private final Paint mDebugPaints[] = new Paint[10];
     
     private Bitmap mPendingPaintBitmap;
-    
+
 //    private Bitmap mCircleBits;
 //    private Rect mCircleBitsFrame;
     private Bitmap mAirbrushBits;
@@ -102,10 +107,20 @@ public class Slate extends View {
     private Rect mFountainPenBitsFrame;
         
     private PressureCooker mPressureCooker;
-    
+
+    private boolean mZoomMode;
+
     private boolean mEmpty;
-    
+
     private Region mDirtyRegion = new Region();
+
+    private Paint mBlitPaint;
+    private Paint mWorkspacePaint;
+    private Matrix mZoomMatrix = new Matrix();
+    private Matrix mZoomMatrixInv = new Matrix();
+    private float mPanX = 0f, mPanY = 0f;
+    private int mMemClass;
+    private boolean mLowMem;
 
     public interface SlateListener {
         void strokeStarted();
@@ -122,7 +137,8 @@ public class Slate extends View {
         
         private float mLastPressure = -1f;
         private int mLastTool = 0;
-        
+        final float[] mTmpPoint = new float[2];
+
         public MarkersPlotter() {
             mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
             mRenderer = new SmoothStroker();
@@ -141,8 +157,14 @@ public class Slate extends View {
 
             final float radius = lerp(mRadiusMin, mRadiusMax,
                     (float) Math.pow(pressureNorm, mPressureExponent));
+
+            mTmpPoint[0] = s.x - mPanX;
+            mTmpPoint[1] = s.y - mPanY;
+            mZoomMatrixInv.mapPoints(mTmpPoint);
             
-            final RectF dirtyF = mRenderer.strokeTo(mTiledCanvas, s.x, s.y, radius);
+            final RectF dirtyF = mRenderer.strokeTo(mTiledCanvas,
+                    mTmpPoint[0],
+                    mTmpPoint[1], radius);
             dirty(dirtyF);
 //            dirtyF.roundOut(tmpDirtyRect);
 //            tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
@@ -408,16 +430,15 @@ public class Slate extends View {
         mEmpty = true;
 
         // setup brush bitmaps
-        final int memClass;
         final ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-            memClass = am.getLargeMemoryClass();
+            mMemClass = am.getLargeMemoryClass();
         } else {
-            memClass = am.getMemoryClass();
+            mMemClass = am.getMemoryClass();
         }
-        final boolean lowMem = (memClass <= 16);
-        if (DEBUG) {
-            Log.v(TAG, "Slate.init: memClass=" + memClass + (lowMem ? " LOW" : ""));
+        mLowMem = (mMemClass <= 16);
+        if (true||DEBUG) {
+            Log.v(TAG, "Slate.init: memClass=" + mMemClass + (mLowMem ? " (LOW)" : ""));
         }
 
         final Resources res = getContext().getResources();
@@ -428,7 +449,7 @@ public class Slate extends View {
 
         BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ALPHA_8;
-        if (lowMem) { // let's see how this works in practice
+        if (mLowMem) { // let's see how this works in practice
             opts.inSampleSize = 4;
         }
         mAirbrushBits = BitmapFactory.decodeResource(res, R.drawable.airbrush_light, opts);
@@ -459,6 +480,11 @@ public class Slate extends View {
             }
         }
         
+        mWorkspacePaint = new Paint();
+        mWorkspacePaint.setColor(0x40000000);
+
+        mBlitPaint = new Paint();
+
         if (true) {
             mDebugPaints[0] = new Paint();
             mDebugPaints[0].setStyle(Paint.Style.STROKE);
@@ -477,6 +503,53 @@ public class Slate extends View {
     }
 
     public boolean isEmpty() { return mEmpty; }
+
+    public void resetZoom() {
+        mPanX = mPanY = 0;
+        final Matrix m = new Matrix();
+        m.postScale(1f/DENSITY, 1f/DENSITY);
+        setZoom(m);
+    }
+
+    public void setZoomPos(float x, float y) {
+        mPanX = x;
+        mPanY = y;
+        invalidate();
+    }
+
+    public void setZoomPos(float[] pos) {
+        mPanX = pos[0];
+        mPanY = pos[1];
+        invalidate();
+    }
+
+    public float[] getZoomPos(float[] pos) {
+        if (pos == null) pos = new float[2];
+        pos[0] = mPanX;
+        pos[1] = mPanY;
+        return pos;
+    }
+
+    public float getZoomPosX() {
+        return mPanX;
+    }
+
+    public float getZoomPosY() {
+        return mPanY;
+    }
+
+    public Matrix getZoom() {
+        return mZoomMatrix;
+    }
+
+    public Matrix getZoomInv() {
+        return mZoomMatrixInv;
+    }
+
+    public void setZoom(Matrix m) {
+        mZoomMatrix.set(m);
+        mZoomMatrix.invert(mZoomMatrixInv);
+    }
     
     public void setPenSize(float min, float max) {
         mRadiusMin = min * 0.5f;
@@ -501,12 +574,16 @@ public class Slate extends View {
             mPendingPaintBitmap = null;
         }
         mEmpty = true;
+
+        // reset the zoom when clearing
+        resetZoom();
     }
 
     public int getDebugFlags() { return mDebugFlags; }
     public void setDebugFlags(int f) {
         if (f != mDebugFlags) {
             mDebugFlags = f;
+            mTiledCanvas.setDebug(0 != (f & FLAG_DEBUG_TILES));
             invalidate();
         }
     }
@@ -659,27 +736,6 @@ public class Slate extends View {
         return newb;
     }
 
-    public void setBitmap(Bitmap b) {
-        if (b == null) return;
-        
-        mTiledCanvas.recycleBitmaps();
-        mTiledCanvas = new TiledBitmapCanvas(b);
-        mEmpty = false;
-        
-        // XXX FIXME for tiling
-
-        if (DEBUG) { 
-            Log.v(TAG, "setBitmap: drawing new bits into current canvas");
-        }
-        // mTiledCanvas.drawBitmap(b, 0, 0, null);
-
-        if (DEBUG) Log.d(TAG, String.format("setBitmap(%s, %dx%d): mTiledCanvas=%s",
-            b.toString(), b.getWidth(), b.getHeight(),
-            mTiledCanvas.toString()));
-
-        mEmpty = false;
-    }
-
     public void setPenColor(int color) {
         for (MarkersPlotter plotter : mStrokes) {
             // XXX: todo: only do this if the stroke hasn't begun already
@@ -694,12 +750,40 @@ public class Slate extends View {
         }
     }
     
+    static final int DENSITY = 2;
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
         if (mTiledCanvas != null) return;
-        
-        mTiledCanvas = new TiledBitmapCanvas(w, h, Bitmap.Config.ARGB_8888);
+
+        final int widthPx = DENSITY*w;
+        final int heightPx = DENSITY*h;
+        final int bytesPerCanvas = widthPx * heightPx * 4;
+        int numVersions = TiledBitmapCanvas.DEFAULT_NUM_VERSIONS;
+        final int memCeiling = (mMemClass * 1024 * 1024);
+        if (bytesPerCanvas * (numVersions + 2) > memCeiling) {
+            numVersions = memCeiling / bytesPerCanvas - 2;
+        }
+        if (numVersions < 1) { // uh get some RAM already
+            numVersions = 1;
+        }
+
+        Log.v(TAG, String.format(
+                "About to init tiled %dx canvas: %dx%d x 32bpp x %d = %d bytes (ceiling: %d)",
+                DENSITY,
+                widthPx,
+                heightPx,
+                numVersions,
+                widthPx * heightPx * 4 * numVersions,
+                memCeiling
+                ));
+        mTiledCanvas = new TiledBitmapCanvas(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888,
+            TiledBitmapCanvas.DEFAULT_TILE_SIZE,
+            numVersions
+            );
         if (mTiledCanvas == null) {
             throw new RuntimeException("onSizeChanged: Unable to allocate main buffer (" + w + "x" + h + ")");
         }
@@ -709,24 +793,48 @@ public class Slate extends View {
             mPendingPaintBitmap = null;
             paintBitmap(b);
         }
+
+        resetZoom();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         if (mTiledCanvas != null) {
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+
+            if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity()) {
+                canvas.translate(mPanX, mPanY);
+                canvas.concat(mZoomMatrix);
+
+                canvas.drawRect(-20000, -20000, 20000, 0, mWorkspacePaint);
+                canvas.drawRect(-20000, 0, 0, mTiledCanvas.getHeight(), mWorkspacePaint);
+                canvas.drawRect(mTiledCanvas.getWidth(), 0, 20000, mTiledCanvas.getHeight(), mWorkspacePaint);
+                canvas.drawRect(-20000, mTiledCanvas.getHeight(), 20000, 20000, mWorkspacePaint);
+            }
+            
             if (!mDirtyRegion.isEmpty()) {
                 canvas.clipRegion(mDirtyRegion);
                 mDirtyRegion.setEmpty();
             }
-            mTiledCanvas.drawTo(canvas, 0, 0, null, false); // @@ set to true for dirty tile updates
+            // TODO: tune this threshold based on the device density
+            mBlitPaint.setFilterBitmap(getScale(mZoomMatrix) < 3f);
+            mTiledCanvas.drawTo(canvas, 0, 0, mBlitPaint, false); // @@ set to true for dirty tile updates
             if (0 != (mDebugFlags & FLAG_DEBUG_STROKES)) {
                 drawStrokeDebugInfo(canvas);
             }
+
+            canvas.restore();
             
             if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
                 mPressureCooker.drawDebug(canvas);
             }
         }
+    }
+
+    private static final float[] mvals = new float[9];
+    public static float getScale(Matrix m) {
+        m.getValues(mvals);
+        return mvals[0];
     }
 
     float dbgX = -1, dbgY = -1;
@@ -757,6 +865,35 @@ public class Slate extends View {
         return MotionEvent.TOOL_TYPE_FINGER;
     }
 
+    PointF getCenter(MotionEvent event, PointF out) {
+        int P = event.getPointerCount();
+        PointF pt = ((out == null) ? new PointF() : out);
+        pt.set(event.getX(0), event.getY(0));
+        final int zero[] = { 0, 0 };
+        getLocationOnScreen(zero);
+        for (int j = 1; j < P; j++) {
+            pt.x += event.getX(j) + zero[0];
+            pt.y += event.getY(j) + zero[1];
+        }
+        pt.x /= P;
+        pt.y /= P;
+        return pt;
+    }
+    double getSpan(MotionEvent event) {
+        int P = event.getPointerCount();
+        if (P < 2) return 0;
+        final int zero[] = { 0, 0 };
+        getLocationOnScreen(zero);
+        final double x0 = event.getX(0) + zero[0];
+        final double x1 = event.getX(1) + zero[0];
+        final double y0 = event.getY(0) + zero[1];
+        final double y1 = event.getY(1) + zero[1];
+        final double span = Math.hypot(event.getX(0) - event.getX(1), event.getY(0) - event.getY(1));
+        Log.v(TAG, String.format("zoom: p0=(%g,%g) p1=(%g,%g) span=%g",
+                x0, y0, x1, y1, span));
+        return span; 
+    }
+
     @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -770,6 +907,10 @@ public class Slate extends View {
         // starting a new touch? commit the previous state of the canvas
         if (action == MotionEvent.ACTION_DOWN) {
             commitStroke();
+        }
+
+        if (mZoomMode) {
+            return false;
         }
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
@@ -854,7 +995,11 @@ public class Slate extends View {
     public static float lerp(float a, float b, float f) {
         return a + f * (b - a);
     }
-    
+
+    public static float clamp(float a, float b, float f) {
+        return f < a ? a : (f > b ? b : f);
+    }
+
     @Override
     public void invalidate(Rect r) {
         if (r.isEmpty()) {
@@ -875,5 +1020,9 @@ public class Slate extends View {
         } else {
             invalidate(tmpDirtyRect);
         }
+    }
+
+    public void setZoomMode(boolean b) {
+        mZoomMode = b;
     }
 }

@@ -11,6 +11,7 @@
    	    android:id="@+id/actionbar"
    		android:layout_width="match_parent"
    		android:layout_height="@dimen/action_bar_height"
+        android:layout_marginTop="@dimen/status_bar_height"
    		/>
    		
    	<include layout="@layout/colors_horizontal"
@@ -24,7 +25,7 @@
    	    android:id="@+id/tools"
    		android:layout_width="52dp"
    		android:layout_height="match_parent"
-   		android:layout_marginTop="@dimen/action_bar_height"
+   		android:layout_marginTop="@dimen/tools_margin_top"
    		android:layout_marginBottom="96dp"
         android:layout_gravity="left"
    		/>
@@ -34,6 +35,7 @@
         android:src="@drawable/markers"
         android:layout_width="@dimen/action_bar_logo_width"
         android:layout_height="@dimen/action_bar_height"
+        android:layout_marginTop="@dimen/status_bar_height"
         android:padding="2dp"
         android:onClick="clickLogo"
         android:alpha="0.5"

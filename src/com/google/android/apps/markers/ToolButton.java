@@ -16,18 +16,14 @@
 
 package com.google.android.apps.markers;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.Rect;
-import android.graphics.RectF;
+import android.graphics.*;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -38,9 +34,10 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.accessibility.AccessibilityEvent;
 
+import android.widget.FrameLayout;
 import org.dsandler.apps.markers.R;
 
-public class ToolButton extends View {
+public class ToolButton extends View implements View.OnLongClickListener, View.OnClickListener {
     public static class ToolCallback {
         public void setZoomMode(ToolButton me) {}
         public void setPenMode(ToolButton me, float min, float max) {}
@@ -48,36 +45,20 @@ public class ToolButton extends View {
         public void setBackgroundColor(ToolButton me, int color) {}
         public void restore(ToolButton me) {}
         public void setPenType(ToolButton penTypeButton, int penType) {}
+        public void resetZoom(ToolButton zoomToolButton) { }
     }
 
-    // Enable a delay here to use "shifted" mode, where longpressing a tool will only assert that
-    // tool until you lift your finger
-    //    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 300; // ms
-    private static final long PERMANENT_TOOL_SWITCH_THRESHOLD = 0; // ms
+    private static boolean EPHEMERAL_TOOLS = false;
     
     private ToolCallback mCallback;
     private long mDownTime;
     
     protected Paint mPaint;
     protected ColorStateList mFgColor, mBgColor;
-
-    private Runnable mLongPressHandler = new Runnable() {
-        @Override
-        public void run() {
-            if (Slate.DEBUG) {
-                Log.d(Slate.TAG, "longpress on " + ToolButton.this + " pressed=" + isPressed());
-            }
-            if (isPressed()) {
-                if (onLongClick(ToolButton.this)) {
-                    deactivate();
-                    invalidate();
-                }
-            }
-        }
-    };
+    SharedPreferences mPrefs;
 
     public ToolButton(Context context) {
-        super(context);
+        this(context, null, 0);
     }
 
     public ToolButton(Context context, AttributeSet attrs) {
@@ -93,6 +74,9 @@ public class ToolButton extends View {
     }
     
     public static class PenToolButton extends ToolButton {
+        private static final String PREF_STROKE_MIN = ":min";
+        private static final String PREF_STROKE_MAX = ":max";
+
         public float strokeWidthMin, strokeWidthMax;
 
         public PenToolButton(Context context, AttributeSet attrs, int defStyle) {
@@ -100,15 +84,35 @@ public class ToolButton extends View {
 
             TypedArray a = context.obtainStyledAttributes(attrs, 
                     R.styleable.PenToolButton, defStyle, 0);
-            
-            strokeWidthMin = a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1);
-            strokeWidthMax = a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10);
-            
+
+            final float min = mPrefs.getFloat(getId() + PREF_STROKE_MIN,
+                        a.getDimension(R.styleable.PenToolButton_strokeWidthMin, 1));
+            final float max = mPrefs.getFloat(getId() + PREF_STROKE_MAX,
+                        a.getDimension(R.styleable.PenToolButton_strokeWidthMax, 10));
+
+            setWidths(min, max);
+
             a.recycle();
         }
         
         public PenToolButton(Context context, AttributeSet attrs) {
             this(context, attrs, 0);
+        }
+
+        public void setWidths(float min, float max) {
+            if (min != strokeWidthMin || max != strokeWidthMax) {
+                strokeWidthMin = min;
+                strokeWidthMax = max;
+                invalidate();
+                if (isSelected()) {
+                    // assume activated
+                    activate();
+                }
+                SharedPreferences.Editor edit = mPrefs.edit();
+                edit.putFloat(getId() + PREF_STROKE_MIN, min);
+                edit.putFloat(getId() + PREF_STROKE_MAX, max);
+                edit.apply();
+            }
         }
         
         @Override
@@ -123,19 +127,20 @@ public class ToolButton extends View {
             super.onDraw(canvas);
             
             mPaint.setColor(mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor()));
-            
+            final boolean vertical = getHeight() > getWidth();
+
             float r1 = strokeWidthMin * 0.5f;
             float r2 = strokeWidthMax * 0.5f;
-            
-            final boolean vertical = getHeight() > getWidth();
-            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
-            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+
             final float center = (vertical ? getWidth() : getHeight()) / 2;
-            final float iter = 1f / (vertical ? getHeight() : getWidth());
-            final float amplitude = (center-r2)*0.5f;
 
             if (r1 > center) r1 = center;
             if (r2 > center) r2 = center;
+
+            final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
+            final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
+            final float iter = 1f / (vertical ? getHeight() : getWidth());
+            final float amplitude = (center-r2)*0.5f;
 
             for (float f = 0f; f < 1.0f; f += iter) {
                 final float y = Slate.lerp(start, end, f);
@@ -144,12 +149,28 @@ public class ToolButton extends View {
                 canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, mPaint);
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
-        }
-    }
 
-    protected boolean onLongClick(View v) {
-        // do nothing
-        return false;
+            if (r2 == center) {
+                mPaint.setColor(Color.WHITE);
+                mPaint.setTextAlign(Paint.Align.CENTER);
+                mPaint.setTextSize(r2/2);
+                final String maxStr = String.format("%.0f", strokeWidthMax);
+                canvas.drawText(maxStr, vertical ? center : end, -5 + r2/4 + (vertical ? end : center), mPaint);
+            }
+        }
+        
+        @Override
+        public boolean onLongClick(View view) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            final View layout =
+                    inflate(getContext(), R.layout.pen_editor, null);
+            builder.setView(layout);
+            final PenWidthEditorView editor = (PenWidthEditorView) layout.findViewById(R.id.editor);
+            editor.setTool((PenToolButton) view);
+            AlertDialog dlg = builder.create();
+            dlg.show();
+            return true;
+        }
     }
 
     public static class PenTypeButton extends ToolButton {
@@ -294,7 +315,7 @@ public class ToolButton extends View {
         }
 
         @Override
-        protected boolean onLongClick(View v) {
+        public boolean onLongClick(View v) {
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setBackgroundColor(this, color);
             return true;
@@ -302,8 +323,15 @@ public class ToolButton extends View {
     }
 
     public static class ZoomToolButton extends ToolButton {
+        public Bitmap icon;
+        public Rect frame;
+        public final RectF tmpRF = new RectF();
+
         public ZoomToolButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
+            
+            icon = BitmapFactory.decodeResource(getResources(), R.drawable.grabber);
+            frame = new Rect(0, 0, icon.getWidth(), icon.getHeight());
         }
         
         public ZoomToolButton(Context context, AttributeSet attrs) {
@@ -316,12 +344,42 @@ public class ToolButton extends View {
             final ToolCallback cb = getCallback();
             if (cb != null) cb.setZoomMode(this);
         }
+
+        @Override
+        public void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (mPaint == null) return;
+
+            float x = 0.5f*getWidth();
+            float y = 0.5f*getHeight();
+            float r = Math.min(getWidth()-getPaddingLeft()-getPaddingRight(),
+                             getHeight()-getPaddingTop()-getPaddingBottom()) * 0.5f;
+
+
+            int color = mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor());
+            mPaint.setColor(color);
+            mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP)); // SRC_IN ??
+            tmpRF.set(x-r,y-r,x+r,y+r);
+
+            canvas.drawBitmap(icon, frame, tmpRF, mPaint);
+        }
+
+        @Override
+        public boolean onLongClick(View v) {
+            final ToolCallback cb = getCallback();
+            if (cb != null) cb.resetZoom(this);
+            return true;
+        }
     }
 
     public ToolButton(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
+        mPrefs = context.getSharedPreferences("ToolButton", Context.MODE_PRIVATE);
+
         setClickable(true);
+        setOnClickListener(this);
+        setOnLongClickListener(this);
     }
     
     void setCallback(ToolCallback cb) {
@@ -350,36 +408,31 @@ public class ToolButton extends View {
         setPressed(false);
         setSelected(true);
     }
-    
+
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        final int action = event.getAction();
-        
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                if (Slate.DEBUG) Log.d(Slate.TAG, "DOWN on " + ToolButton.this + " lph=" + mLongPressHandler);
-                postDelayed(mLongPressHandler, ViewConfiguration.getLongPressTimeout());
-                mDownTime = event.getEventTime();
-                setPressed(true);
-                invalidate();
-                return true;
-            case MotionEvent.ACTION_UP:
-                if (isPressed()) {
-                    if (!isSelected()) {
-                        activate();
-                        commit();
-                    }
-                    invalidate();
-                }
-                removeCallbacks(mLongPressHandler);
-                return true;
-            case MotionEvent.ACTION_CANCEL:
-                removeCallbacks(mLongPressHandler);
-                return true;
-        }
+    public void onClick(View view) {
+        activate();
+        commit();
+    }
+
+    @Override
+    public boolean onLongClick(View view) {
         return false;
     }
-    
+
+    // the following overrides are in place until I fix up the backgrounds to just use statelist drawables
+    @Override
+    public void setPressed(boolean pressed) {
+        super.setPressed(pressed);
+        invalidate();
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         canvas.drawColor(mBgColor.getColorForState(getDrawableState(), mBgColor.getDefaultColor()));

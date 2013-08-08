@@ -24,4 +24,6 @@
     <dimen name="action_button_width">48dp</dimen>
     <dimen name="action_button_padding_v">4dp</dimen>
     <dimen name="tool_palette_gutter">6dp</dimen>
+    <dimen name="status_bar_height">25dp</dimen>
+    <dimen name="tools_margin_top">73dp</dimen>
 </resources>
