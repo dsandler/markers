@@ -21,4 +21,7 @@
     <dimen name="action_bar_logo_width">64dip</dimen>
     <dimen name="action_button_width">52dp</dimen>
     <dimen name="action_button_padding_v">10dp</dimen>
+
+    <!-- action_bar_height + status_bar_height -->
+    <dimen name="tools_margin_top">81dp</dimen>
 </resources>
