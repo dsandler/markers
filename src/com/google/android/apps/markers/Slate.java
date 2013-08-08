@@ -509,6 +509,7 @@ public class Slate extends View {
         final Matrix m = new Matrix();
         m.postScale(1f/DENSITY, 1f/DENSITY);
         setZoom(m);
+        invalidate();
     }
 
     public void setZoomPos(float x, float y) {
