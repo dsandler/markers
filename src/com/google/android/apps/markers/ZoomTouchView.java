@@ -18,16 +18,10 @@ package com.google.android.apps.markers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.PointF;
-import android.graphics.drawable.Drawable;
-import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -38,6 +32,7 @@ public class ZoomTouchView extends View {
     public static final boolean DEBUG = false;
     public static final boolean DEBUG_OVERLAY = DEBUG;
 
+    private static final boolean DOUBLE_TAP_FATBITS = false;
     public static final float DOUBLE_TAP_ZOOM_LEVEL = 4f;
 
     private Slate mSlate;
@@ -95,19 +90,27 @@ public class ZoomTouchView extends View {
     }
 
     private void doubleClick(MotionEvent event) {
-        final Matrix m = new Matrix();
-        mTouchPointDoc[0] = mTouchPointDoc[1] = 0f;
-        if (getScale(mSlate.getZoom()) == 1f) {
-            getCenter(event, mTouchPoint);
-            mTouchPointDoc[0] = mTouchPoint[0] - mSlate.getZoomPosX();
-            mTouchPointDoc[1] = mTouchPoint[1] - mSlate.getZoomPosY();
-            mSlate.getZoomInv().mapPoints(mTouchPointDoc);
-            m.preScale(DOUBLE_TAP_ZOOM_LEVEL, DOUBLE_TAP_ZOOM_LEVEL,
-                    mTouchPointDoc[0], mTouchPointDoc[1]);
-        }
+        // this is still broken
+        if (DOUBLE_TAP_FATBITS) {
+            final float density = mSlate.getDrawingDensity();
+            final float scale = 1f/density;
+            final Matrix m = new Matrix();
+            mTouchPointDoc[0] = mTouchPointDoc[1] = 0f;
+            if (getScale(mSlate.getZoom()) == scale) {
+                getCenter(event, mTouchPoint);
+                mTouchPoint[0] *= density;
+                mTouchPoint[1] *= density;
+                mTouchPointDoc[0] = mTouchPoint[0] - mSlate.getZoomPosX();
+                mTouchPointDoc[1] = mTouchPoint[1] - mSlate.getZoomPosY();
+                mSlate.getZoomInv().mapPoints(mTouchPointDoc);
+                m.preScale(scale*DOUBLE_TAP_ZOOM_LEVEL, scale*DOUBLE_TAP_ZOOM_LEVEL);
 
-        mSlate.setZoomPos(0,0);
-        mSlate.setZoom(m);
+                mSlate.setZoomPosNoInval(mTouchPointDoc);
+                mSlate.setZoom(m);
+            } else {
+                mSlate.resetZoom();
+            }
+        }
     }
 
     @SuppressLint("NewApi")

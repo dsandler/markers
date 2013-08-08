@@ -66,6 +66,8 @@ public class Slate extends View {
     
     public static final int MAX_POINTERS = 10;
 
+    static final int DENSITY = 2;
+
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
     private static final float SMOOTHING_FILTER_PRESSURE_DECAY = 0.9f;
@@ -512,17 +514,25 @@ public class Slate extends View {
         invalidate();
     }
 
-    public void setZoomPos(float x, float y) {
+    public void setZoomPosNoInval(float x, float y) {
         mPanX = x;
         mPanY = y;
+    }
+
+    public void setZoomPos(float x, float y) {
+        setZoomPosNoInval(x, y);
         invalidate();
     }
 
+    public void setZoomPosNoInval(float[] pos) {
+        setZoomPosNoInval(pos[0], pos[1]);
+    }
+
     public void setZoomPos(float[] pos) {
-        mPanX = pos[0];
-        mPanY = pos[1];
+        setZoomPosNoInval(pos);
         invalidate();
     }
+
 
     public float[] getZoomPos(float[] pos) {
         if (pos == null) pos = new float[2];
@@ -751,7 +761,6 @@ public class Slate extends View {
         }
     }
     
-    static final int DENSITY = 2;
     @Override
     protected void onSizeChanged(int w, int h, int oldw,
             int oldh) {
@@ -1025,5 +1034,9 @@ public class Slate extends View {
 
     public void setZoomMode(boolean b) {
         mZoomMode = b;
+    }
+
+    public float getDrawingDensity() {
+        return (float) DENSITY;
     }
 }
