@@ -277,6 +277,10 @@ public class MarkersActivity extends Activity
                     mLastColor.deactivate();
                     mPrefs.edit().putInt(PREF_LAST_COLOR, color).commit();
                 }
+                if (mActiveTool instanceof ToolButton.ZoomToolButton) {
+                    // you probably want to use a pen now
+                    restore(mActiveTool);
+                }
             }
             @Override
             public void setPenType(ToolButton tool, int penType) {
