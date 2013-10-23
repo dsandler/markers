@@ -423,7 +423,7 @@ public class Slate extends View {
     	super(c);
     	init();
     }
-    
+
     @SuppressLint("NewApi")
     private void init() {
 //        setWillNotCacheDrawing(true);
