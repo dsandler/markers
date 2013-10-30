@@ -638,7 +638,12 @@ public class MarkersActivity extends Activity
     }
 
     public void saveDrawing(File file, boolean temporary, boolean animate, boolean share, boolean clear) {
-        final Bitmap localBits = mSlate.copyBitmap(/*withBackground=*/!temporary);
+        Bitmap localBits;
+        if (mOutputSavePath==null) {
+            localBits = mSlate.copyBitmap(/*withBackground=*/!temporary);
+        }else{
+            localBits = mSlate.copyBitmap(true);
+        }
         if (localBits == null) {
             if (DEBUG) Log.e(TAG, "save: null bitmap");
             return;
@@ -647,6 +652,7 @@ public class MarkersActivity extends Activity
         final File _file = file;
         final boolean _share = share;
         final boolean _clear = clear;
+        final Bitmap _localBits = localBits;
 
         new AsyncTask<Void,Void,String>() {
             @Override
@@ -656,8 +662,15 @@ public class MarkersActivity extends Activity
 
                     if (DEBUG) Log.d(TAG, "save: saving " + _file);
                     OutputStream os = new FileOutputStream(_file);
-                    localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
-                    localBits.recycle();
+                    if (_file.getName().toLowerCase().endsWith("png")) {
+                        _localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
+                    } else if (_file.getName().toLowerCase().endsWith("jpg")) {
+                        _localBits.compress(Bitmap.CompressFormat.JPEG, 90, os);
+                    }else{
+                        // try png anyways for now
+                        _localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
+                    }
+                    _localBits.recycle();
                     os.close();
                     
                     fn = _file.toString();
