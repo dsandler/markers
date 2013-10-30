@@ -415,7 +415,7 @@ public class MarkersActivity extends Activity
         try {
             File wipOuputFile = getOuputFile(WIP_FILENAME, true);
             saveDrawing(wipOuputFile, true);
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e(TAG, "save: error: " + e);
         }
     }
@@ -468,14 +468,16 @@ public class MarkersActivity extends Activity
         Intent startIntent = getIntent();
         if (DEBUG) Log.d(TAG, "starting with intent=" + startIntent + " extras=" + dumpBundle(startIntent.getExtras()));
         String a = startIntent.getAction();
-        if (a.equals(Intent.ACTION_EDIT)) {
-            // XXX: what happens to the old drawing? we should really move to auto-save
-            mSlate.clear();
-            loadImageFromIntent(startIntent);
-        } else if (a.equals(Intent.ACTION_SEND)) {
-            // XXX: what happens to the old drawing? we should really move to auto-save
-            mSlate.clear();
-            loadImageFromContentUri((Uri)startIntent.getParcelableExtra(Intent.EXTRA_STREAM));
+        if (a != null) {
+            if (a.equals(Intent.ACTION_EDIT)) {
+                // XXX: what happens to the old drawing? we should really move to auto-save
+                mSlate.clear();
+                loadImageFromIntent(startIntent);
+            } else if (a.equals(Intent.ACTION_SEND)) {
+                // XXX: what happens to the old drawing? we should really move to auto-save
+                mSlate.clear();
+                loadImageFromContentUri((Uri) startIntent.getParcelableExtra(Intent.EXTRA_STREAM));
+            }
         }
     }
 
