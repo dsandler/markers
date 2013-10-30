@@ -89,6 +89,7 @@ public class MarkersActivity extends Activity
     public static final String PREF_LAST_HUDSTATE = "hudup";
 
     private boolean mJustLoadedImage = false;
+    private String mOutputSavePath;
 
     private Slate mSlate;
 
@@ -145,7 +146,6 @@ public class MarkersActivity extends Activity
                     }
                 }
             };
-
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -214,12 +214,27 @@ public class MarkersActivity extends Activity
         win.requestFeature(Window.FEATURE_NO_TITLE);
 
         setContentView(R.layout.main);
+        
+        // check if there is a request to save to a particular path
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            String outputSavePath = extras.getString(MediaStore.EXTRA_OUTPUT);
+            if (outputSavePath != null) {
+                File outputSaveFile = new File(outputSavePath);
+                File parentFolder = outputSaveFile.getParentFile();
+                if (parentFolder != null && parentFolder.exists()) {
+                    mOutputSavePath = outputSavePath;
+                    if (DEBUG) Log.d(TAG, "outputSavePath defined: " + mOutputSavePath);
+                }
+            }
+        }
+        
         mSlate = (Slate) getLastNonConfigurationInstance();
         if (mSlate == null) {
         	mSlate = new Slate(this);
 
         	// Load the old buffer if necessary
-            if (!mJustLoadedImage) {
+            if (!mJustLoadedImage && mOutputSavePath == null) {
                 loadDrawing(WIP_FILENAME, true);
             } else {
                 mJustLoadedImage = false;
@@ -398,7 +413,12 @@ public class MarkersActivity extends Activity
     @Override
     public void onPause() {
         super.onPause();
-        saveDrawing(WIP_FILENAME, true);
+        try {
+            File wipOuputFile = getOuputFile(WIP_FILENAME, true);
+            saveDrawing(wipOuputFile, true);
+        } catch (IOException e) {
+            Log.e(TAG, "save: error: " + e);
+        }
     }
 
     @Override
@@ -608,23 +628,22 @@ public class MarkersActivity extends Activity
         return false;
     }
 
-    public void saveDrawing(String filename) {
-        saveDrawing(filename, false);
+    public void saveDrawing(File file) {
+        saveDrawing(file, false);
     }
 
-    public void saveDrawing(String filename, boolean temporary) {
-        saveDrawing(filename, temporary, /*animate=*/ false, /*share=*/ false, /*clear=*/ false);
+    public void saveDrawing(File file, boolean temporary) {
+        saveDrawing(file, temporary, /*animate=*/ false, /*share=*/ false, /*clear=*/ false);
     }
 
-    public void saveDrawing(String filename, boolean temporary, boolean animate, boolean share, boolean clear) {
+    public void saveDrawing(File file, boolean temporary, boolean animate, boolean share, boolean clear) {
         final Bitmap localBits = mSlate.copyBitmap(/*withBackground=*/!temporary);
         if (localBits == null) {
             if (DEBUG) Log.e(TAG, "save: null bitmap");
             return;
         }
         
-        final String _filename = filename;
-        final boolean _temporary = temporary;
+        final File _file = file;
         final boolean _share = share;
         final boolean _clear = clear;
 
@@ -633,28 +652,14 @@ public class MarkersActivity extends Activity
             protected String doInBackground(Void... params) {
                 String fn = null;
                 try {
-                    File d = getPicturesDirectory();
-                    d = new File(d, _temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
-                    if (!d.exists()) {
-                        if (d.mkdirs()) {
-                            if (_temporary) {
-                                final File noMediaFile = new File(d, MediaStore.MEDIA_IGNORE_FILENAME);
-                                if (!noMediaFile.exists()) {
-                                    new FileOutputStream(noMediaFile).write('\n');
-                                }
-                            }
-                        } else {
-                            throw new IOException("cannot create dirs: " + d);
-                        }
-                    }
-                    File file = new File(d, _filename);
-                    if (DEBUG) Log.d(TAG, "save: saving " + file);
-                    OutputStream os = new FileOutputStream(file);
+
+                    if (DEBUG) Log.d(TAG, "save: saving " + _file);
+                    OutputStream os = new FileOutputStream(_file);
                     localBits.compress(Bitmap.CompressFormat.PNG, 0, os);
                     localBits.recycle();
                     os.close();
                     
-                    fn = file.toString();
+                    fn = _file.toString();
                 } catch (IOException e) {
                     Log.e(TAG, "save: error: " + e);
                 }
@@ -680,26 +685,82 @@ public class MarkersActivity extends Activity
         }.execute();
         
     }
+    
+    /**
+     * Prepares the output {@link File} to write to.
+     * 
+     * <p>The output file can be defined by the incoming intent, in which case 
+     * <code>mOutputSavePath != null</code> and the input parameters are ignored.
+     * </p>
+     * <p>If instead no output is defined by intent, the file path
+     * is constructed on the fly by means of the incoming parameters.
+     * </p> 
+     * 
+     * @param proposedFileName the proposed file name to be used in case of file path
+     *         generation.
+     * @param temporary flag to define the folder to which to save to.
+     * @return the output file name, for which the existence of the parent folder
+     *          is assured. 
+     * @throws IOException
+     */
+    private File getOuputFile(String proposedFileName, boolean temporary ) throws IOException {
+        if (mOutputSavePath != null) {
+            return new File(mOutputSavePath);
+        } else {
+            String filename;
+            if (proposedFileName != null) {
+                filename = proposedFileName;
+            } else {
+                filename = System.currentTimeMillis() + ".png";
+            }
+            
+            File d = getPicturesDirectory();
+            d = new File(d, temporary ? IMAGE_TEMP_DIRNAME : IMAGE_SAVE_DIRNAME);
+            if (!d.exists()) {
+                if (d.mkdirs()) {
+                    if (temporary) {
+                        final File noMediaFile = new File(d, MediaStore.MEDIA_IGNORE_FILENAME);
+                        if (!noMediaFile.exists()) {
+                            new FileOutputStream(noMediaFile).write('\n');
+                        }
+                    }
+                } else {
+                    throw new IOException("cannot create dirs: " + d);
+                }
+            }
+            File file = new File(d, filename);
+            return file;
+        }
+    }
 
     public void clickSave(View v) {
         if (mSlate.isEmpty()) return;
         
-        v.setEnabled(false);
-        final String filename = System.currentTimeMillis() + ".png"; 
-        saveDrawing(filename);
-        Toast.makeText(this, "Drawing saved: " + filename, Toast.LENGTH_SHORT).show();
-        v.setEnabled(true);
+        try {
+            v.setEnabled(false);
+            final File file = getOuputFile(null, false); 
+            saveDrawing(file);
+            Toast.makeText(this, "Drawing saved: " + file, Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Log.e(TAG, "save: error: " + e);
+        } finally {
+            v.setEnabled(true);
+        }
     }
 
     public void clickSaveAndClear(View v) {
         if (mSlate.isEmpty()) return;
-
-        v.setEnabled(false);
-        final String filename = System.currentTimeMillis() + ".png"; 
-        saveDrawing(filename, 
-                /*temporary=*/ false, /*animate=*/ true, /*share=*/ false, /*clear=*/ true);
-        Toast.makeText(this, "Drawing saved: " + filename, Toast.LENGTH_SHORT).show();
-        v.setEnabled(true);
+        try {
+            v.setEnabled(false);
+            final File file = getOuputFile(null, false); 
+            saveDrawing(file, 
+                    /*temporary=*/ false, /*animate=*/ true, /*share=*/ false, /*clear=*/ true);
+            Toast.makeText(this, "Drawing saved: " + file, Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Log.e(TAG, "save: error: " + e);
+        } finally {
+            v.setEnabled(true);
+        }
     }
 
     private void setThingyEnabled(Object v, boolean enabled) {
@@ -709,15 +770,20 @@ public class MarkersActivity extends Activity
     }
 
     public void clickShare(View v) {
-        hideOverflow();
-        setThingyEnabled(v, false);
-        final String filename = System.currentTimeMillis() + ".png";
-        // can't use a truly temporary file because:
-        // - we want mediascanner to give us a content: URI for it; some apps don't like file: URIs
-        // - if mediascanner scans it, it will show up in Gallery, so it might as well be a regular drawing
-        saveDrawing(filename,
-                /*temporary=*/ false, /*animate=*/ false, /*share=*/ true, /*clear=*/ false);
-        setThingyEnabled(v, true);
+        try{
+            hideOverflow();
+            setThingyEnabled(v, false);
+            final File file = getOuputFile(null, false);
+            // can't use a truly temporary file because:
+            // - we want mediascanner to give us a content: URI for it; some apps don't like file: URIs
+            // - if mediascanner scans it, it will show up in Gallery, so it might as well be a regular drawing
+            saveDrawing(file,
+                    /*temporary=*/ false, /*animate=*/ false, /*share=*/ true, /*clear=*/ false);
+        } catch (IOException e) {
+            Log.e(TAG, "save: error: " + e);
+        } finally {
+            setThingyEnabled(v, true);
+        }
     }
 
     public void clickLoad(View unused) {
@@ -833,7 +899,9 @@ public class MarkersActivity extends Activity
     protected void loadImageFromContentUri(Uri contentUri) {
         Toast.makeText(this, "Loading from " + contentUri, Toast.LENGTH_SHORT).show();
 
-        loadDrawing(WIP_FILENAME, true);
+        // load the temporary image only if no file has been supplied to edit
+        if(mOutputSavePath == null)
+            loadDrawing(WIP_FILENAME, true);
         mJustLoadedImage = true;
 
         try {
