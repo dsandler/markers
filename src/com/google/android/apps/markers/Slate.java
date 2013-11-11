@@ -483,7 +483,7 @@ public class Slate extends View {
         }
         
         mWorkspacePaint = new Paint();
-        mWorkspacePaint.setColor(0x40000000);
+        mWorkspacePaint.setColor(0x40606060);
 
         mBlitPaint = new Paint();
 
