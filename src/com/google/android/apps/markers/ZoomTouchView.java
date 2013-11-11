@@ -155,8 +155,13 @@ public class ZoomTouchView extends View {
 
                     if (scale != 0f) {
                         Matrix m = new Matrix(mInitialZoomMatrix);
+                        final float currentScale = getScale(m);
+
+                        scale = Math.max(Math.min(scale*currentScale, 20.0f), 0.1f)
+                                    / currentScale;
 
                         m.preScale(scale, scale, mTouchPointDoc[0], mTouchPointDoc[1]);
+
                         mSlate.setZoom(m);
                     }
                 }
