@@ -244,7 +244,7 @@ public class MarkersActivity extends Activity
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
         
-        setupLayers(); // the HUD needs to have a software layer at all times 
+        setupLayers(); // the HUD needs to have a software layer at all times
                        // so we can draw through it quickly
 
         mDebugButton = findViewById(R.id.debug);
@@ -541,7 +541,6 @@ public class MarkersActivity extends Activity
                     public void onAnimationEnd(Animator a) {
                         if (mComboHudView != null) {
                             mComboHudView.setVisibility(View.GONE);
-                            mComboHudView.setLayerType(View.LAYER_TYPE_NONE, null);
                         } else {
                             mColorsView.setVisibility(View.GONE);
                             mToolsView.setVisibility(View.GONE);
@@ -581,17 +580,6 @@ public class MarkersActivity extends Activity
                     b.with(ObjectAnimator.ofFloat(mColorsView, "alpha", 0f, 1f))
                      .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f));
                 }
-                a.addListener(new AnimatorListenerAdapter() {
-                    public void onAnimationEnd(Animator a) {
-                        if (mComboHudView != null) {
-                            mComboHudView.setVisibility(View.VISIBLE);
-                            mComboHudView.setLayerType(View.LAYER_TYPE_NONE, null);
-                        } else {
-                            mColorsView.setVisibility(View.VISIBLE);
-                            mToolsView.setVisibility(View.VISIBLE);
-                        }
-                    }
-                });
                 a.start();
             } else {
                 if (hasAnimations()) {
