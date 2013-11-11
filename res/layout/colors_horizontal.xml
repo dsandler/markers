@@ -20,7 +20,6 @@
         style="@style/ActionBar.Bar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-
         android:orientation="horizontal"
         android:id="@+id/colors"
         android:paddingTop="@dimen/tool_palette_gutter"

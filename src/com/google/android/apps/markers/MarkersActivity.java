@@ -240,11 +240,10 @@ public class MarkersActivity extends Activity
 
         mActionBarView = findViewById(R.id.actionbar);
         mComboHudView = findViewById(R.id.hud);
-        mComboHudView.setFitsSystemWindows(true);
         mToolsView = findViewById(R.id.tools);
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
-        
+
         setupLayers(); // the HUD needs to have a software layer at all times
                        // so we can draw through it quickly
 

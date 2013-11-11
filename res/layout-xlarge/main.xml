@@ -38,6 +38,7 @@
 		android:gravity="left"
 		android:orientation="vertical"
 	    android:background="#FF000000"
+        android:fitsSystemWindows="true"
 		>
 		<include layout="@layout/tools"
 		    android:id="@+id/tools"
