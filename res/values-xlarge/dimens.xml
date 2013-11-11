@@ -19,5 +19,5 @@
     <dimen name="action_bar_logo_width">96dip</dimen>
     <!-- pre-JB xlarge devices have no top status bar -->
     <dimen name="status_bar_height">0dp</dimen>
-    <dimen name="tools_margin_top">48dp</dimen>
+    <dimen name="tools_margin_top">@dimen/action_bar_height</dimen>
 </resources>
