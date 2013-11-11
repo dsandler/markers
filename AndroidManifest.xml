@@ -16,7 +16,7 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.dsandler.apps.markers"
-      android:versionCode="48" android:versionName="1.3-beta">
+      android:versionCode="49" android:versionName="1.3-beta">
     <uses-sdk android:targetSdkVersion="19"
               android:minSdkVersion="5" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />

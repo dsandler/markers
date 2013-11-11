@@ -66,7 +66,7 @@ public class Slate extends View {
     
     public static final int MAX_POINTERS = 10;
 
-    static final int DENSITY = 2;
+    static final int DENSITY = 1;
 
     private static final int SMOOTHING_FILTER_WLEN = 6;
     private static final float SMOOTHING_FILTER_POS_DECAY = 0.65f;
