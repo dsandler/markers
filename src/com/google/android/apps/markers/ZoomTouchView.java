@@ -214,7 +214,9 @@ public class ZoomTouchView extends View {
 
         setVisibility(View.VISIBLE);
         //canvas.drawColor(0xFFFFFF00);
-        setAlpha(0.5f);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            setAlpha(0.5f);
+        }
         Paint pt = new Paint();
         pt.setFlags(Paint.ANTI_ALIAS_FLAG);
         pt.setTextSize(20f);

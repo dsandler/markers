@@ -227,7 +227,9 @@ public class MarkersActivity extends Activity
         mZoomView = new ZoomTouchView(this);
         mZoomView.setSlate(mSlate);
         mZoomView.setEnabled(false);
-        mZoomView.setAlpha(0);
+        if (hasAnimations()) {
+            mZoomView.setAlpha(0);
+        }
         root.addView(mZoomView, 0);
         
         mMediaScannerConnection =
