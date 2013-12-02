@@ -111,7 +111,11 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
                 SharedPreferences.Editor edit = mPrefs.edit();
                 edit.putFloat(getId() + PREF_STROKE_MIN, min);
                 edit.putFloat(getId() + PREF_STROKE_MAX, max);
-                edit.apply();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+                    edit.apply();
+                } else {
+                    edit.commit(); // I guess we can wait for it.
+                }
             }
         }
         
