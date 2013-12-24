@@ -865,13 +865,15 @@ public class Slate extends View {
         }
         
         // dirty hack for the HTC Flyer
-        if ("flyer".equals(Build.HARDWARE)) {
-            if (me.getSize(index) <= 0.1f) {
-                // with very high probability this is the stylus
-                return MotionEvent.TOOL_TYPE_STYLUS;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO) {
+            if ("flyer".equals(Build.HARDWARE)) {
+                if (me.getSize(index) <= 0.1f) {
+                    // with very high probability this is the stylus
+                    return MotionEvent.TOOL_TYPE_STYLUS;
+                }
             }
         }
-        
+
         return MotionEvent.TOOL_TYPE_FINGER;
     }
 
@@ -907,7 +909,9 @@ public class Slate extends View {
     @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        int action = event.getActionMasked();
+        final int action = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
+                ? event.getActionMasked()
+                : event.getAction();
         int N = event.getHistorySize();
         int P = event.getPointerCount();
         long time = event.getEventTime();
@@ -925,7 +929,9 @@ public class Slate extends View {
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
         		|| action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
-            int j = event.getActionIndex();
+            int j = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
+                    ? event.getActionIndex()
+                    : 0;
             
         	mTmpSpot.update(
         	        event.getX(j),
