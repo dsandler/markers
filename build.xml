@@ -82,4 +82,16 @@
     <!-- version-tag: 1 -->
     <import file="${sdk.dir}/tools/ant/build.xml" />
 
+	<target name="start" description="Start App">
+		<echo>Starting Markers...</echo>
+
+		<exec executable="${adb}" failonerror="true">
+			<arg value="shell" />
+			<arg value="am" />
+			<arg value="start" />
+			<arg value="-n" />
+			<arg value="org.dsandler.apps.markers/com.google.android.apps.markers.MarkersActivity" />
+		</exec>
+	</target>
+
 </project>
