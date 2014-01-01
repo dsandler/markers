@@ -523,6 +523,10 @@ public class MarkersActivity extends Activity
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
     }
 
+    final static boolean hasSystemUiFlags() {
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN);
+    }
+
     public void clickLogo(View v) {
         setHUDVisibility(!getHUDVisibility(), true);
     }
@@ -533,7 +537,7 @@ public class MarkersActivity extends Activity
 
     @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
-        if (hasAnimations()) {
+        if (hasSystemUiFlags()) {
             mSlate.setSystemUiVisibility(
                   View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
