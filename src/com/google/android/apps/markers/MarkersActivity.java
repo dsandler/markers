@@ -246,6 +246,16 @@ public class MarkersActivity extends Activity
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
 
+        DecorTracker dt = DecorTracker.get();
+        dt.addInsettableView(mLogoView);
+        dt.addInsettableView(mActionBarView);
+        if (mComboHudView != null) {
+            dt.addInsettableView(mComboHudView);
+        } else {
+            dt.addInsettableView(mToolsView);
+            dt.addInsettableView(mColorsView);
+        }
+
         setupLayers(); // the HUD needs to have a software layer at all times
                        // so we can draw through it quickly
 

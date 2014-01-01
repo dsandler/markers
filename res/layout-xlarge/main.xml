@@ -27,7 +27,6 @@
       	android:id="@+id/actionbar"
 	    android:layout_width="match_parent"
 	    android:layout_height="@dimen/action_bar_height"
-        android:layout_marginTop="@dimen/status_bar_height"
 	    />
 	       
 	<LinearLayout
@@ -37,7 +36,6 @@
    		android:layout_marginTop="@dimen/tools_margin_top"
 		android:gravity="left"
 		android:orientation="vertical"
-        android:fitsSystemWindows="true"
 		>
 		<include layout="@layout/tools"
 		    android:id="@+id/tools"
@@ -62,12 +60,11 @@
 			/>
 	</LinearLayout>
 
-    <ImageView
+    <com.google.android.apps.markers.LogoView
         android:id="@+id/logo"
         android:src="@drawable/markers"
         android:layout_width="@dimen/action_bar_logo_width"
         android:layout_height="@dimen/action_bar_height"
-        android:layout_marginTop="@dimen/status_bar_height"
         android:padding="2dp"
         android:onClick="clickLogo"
         android:alpha="0.5"
