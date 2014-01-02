@@ -246,6 +246,16 @@ public class MarkersActivity extends Activity
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
 
+        DecorTracker dt = DecorTracker.get();
+        dt.addInsettableView(mLogoView);
+        dt.addInsettableView(mActionBarView);
+        if (mComboHudView != null) {
+            dt.addInsettableView(mComboHudView);
+        } else {
+            dt.addInsettableView(mToolsView);
+            dt.addInsettableView(mColorsView);
+        }
+
         setupLayers(); // the HUD needs to have a software layer at all times
                        // so we can draw through it quickly
 
@@ -513,6 +523,10 @@ public class MarkersActivity extends Activity
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB);
     }
 
+    final static boolean hasSystemUiFlags() {
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN);
+    }
+
     public void clickLogo(View v) {
         setHUDVisibility(!getHUDVisibility(), true);
     }
@@ -523,7 +537,7 @@ public class MarkersActivity extends Activity
 
     @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
-        if (hasAnimations()) {
+        if (hasSystemUiFlags()) {
             mSlate.setSystemUiVisibility(
                   View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_LAYOUT_STABLE

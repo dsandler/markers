@@ -82,7 +82,9 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
         public PenToolButton(Context context, AttributeSet attrs, int defStyle) {
             super(context, attrs, defStyle);
 
-            TypedArray a = context.obtainStyledAttributes(attrs, 
+            if (isInEditMode()) return;
+
+            TypedArray a = context.obtainStyledAttributes(attrs,
                     R.styleable.PenToolButton, defStyle, 0);
 
             final float min = mPrefs.getFloat(getId() + PREF_STROKE_MIN,
