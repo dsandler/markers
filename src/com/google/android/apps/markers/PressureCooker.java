@@ -51,14 +51,21 @@ class PressureCooker {
     private float mPressureRecentMax = 0;
     
     private Context mContext;
-    
+
+    static final Paint mDebugPaint;
+    static {
+        mDebugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mDebugPaint.setColor(0xFFFF0000);
+    }
+
     public PressureCooker(Context context) {
         mContext = context;
+        mDebugPaint.setTextSize(9 * context.getResources().getDisplayMetrics().density);
         loadStats();
     }
     
     public void loadStats() {
-        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
         mPressureMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
         mPressureMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
@@ -68,7 +75,7 @@ class PressureCooker {
     }
 
     public void saveStats() {
-        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor prefsE = prefs.edit();
         prefsE.putBoolean(PREF_FIRST_RUN, false);
     
@@ -87,7 +94,7 @@ class PressureCooker {
         mLastPressure = pressure;
         if (pressure < mPressureRecentMin) mPressureRecentMin = pressure;
         if (pressure > mPressureRecentMax) mPressureRecentMax = pressure;
-        
+
         if (--mPressureUpdateCountdown == 0) {
             final float decay = PRESSURE_UPDATE_DECAY;
             mPressureMin = (1-decay) * mPressureMin + decay * mPressureRecentMin;
@@ -117,12 +124,6 @@ class PressureCooker {
         */
 
         return pressureNorm;
-    }
-    
-    static final Paint mDebugPaint;
-    static {
-        mDebugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mDebugPaint.setColor(0xFFFF0000);
     }
     
     public void drawDebug(Canvas canvas) {

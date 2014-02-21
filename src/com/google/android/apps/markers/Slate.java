@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -142,7 +143,15 @@ public class Slate extends View {
         final float[] mTmpPoint = new float[2];
 
         public MarkersPlotter() {
-            mCoordBuffer = new SpotFilter(SMOOTHING_FILTER_WLEN, SMOOTHING_FILTER_POS_DECAY, SMOOTHING_FILTER_PRESSURE_DECAY, this);
+            final SharedPreferences prefs
+                    = getContext().getSharedPreferences("Markers", Context.MODE_PRIVATE);
+            final int wlen = prefs.getInt("smoothing_filter_wlen", SMOOTHING_FILTER_WLEN);
+            final float pos_decay
+                    = prefs.getFloat("smoothing_filter_pos_decay", SMOOTHING_FILTER_POS_DECAY);
+            final float pressure_decay
+                    = prefs.getFloat("smoothing_filter_pressure_decay",
+                                     SMOOTHING_FILTER_PRESSURE_DECAY);
+            mCoordBuffer = new SpotFilter(wlen, pos_decay, pressure_decay, this);
             mRenderer = new SmoothStroker();
         }
 
@@ -605,21 +614,25 @@ public class Slate extends View {
     private int mBackgroundColor = Color.TRANSPARENT;
 
     private void drawStrokeDebugInfo(Canvas c) {
-        final int ROW_HEIGHT = 24;
-        final int ROW_MARGIN = 6;
-        final int COLUMN_WIDTH = 55;
-        
+        final float dp = getContext().getResources().getDisplayMetrics().density;
+
+        final int ROW_HEIGHT = (int) (24 * dp);
+        final int ROW_MARGIN = (int) (6 * dp);
+        final int COLUMN_WIDTH = (int) (55 * dp);
+
         final float FIRM_PRESSURE_LOW = 0.85f;
         final float FIRM_PRESSURE_HIGH = 1.25f;
         
+        final int width = (int) (c.getWidth() - 48 * dp);
+        final int height = ROW_HEIGHT * mStrokes.length + 2 * ROW_MARGIN;
+
         if (mStrokeDebugGraph == null) {
-            final int width = c.getWidth() - 128;
-            final int height = ROW_HEIGHT * mStrokes.length + 2 * ROW_MARGIN;
             mStrokeDebugGraph = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             if (mStrokeDebugGraph == null) {
                 throw new RuntimeException("drawStrokeDebugInfo: couldn't create debug bitmap (" + width + "x" + height + ")");
             }
             mGraphPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mGraphPaint1.setTextSize(10 * dp);
         }
         
         Canvas graph = new Canvas(mStrokeDebugGraph);
@@ -628,9 +641,9 @@ public class Slate extends View {
         graph.drawColor(0, PorterDuff.Mode.CLEAR);
         graph.restore();
         
-        int left = 4;
+        int left = (int) (4 * dp);
         int bottom = graph.getHeight() - ROW_MARGIN;
-        final int STEP = 4; 
+        final int STEP = (int) (1 * dp);
         for (MarkersPlotter st : mStrokes) {
             float r = st.getLastPressure();
             
@@ -645,12 +658,12 @@ public class Slate extends View {
                     ((st.getLastTool() == MotionEvent.TOOL_TYPE_STYLUS) ? "S" : "F"),
                     r);
             
-            graph.drawText(s, left, bottom - 2, mGraphPaint1);
+            graph.drawText(s, left, bottom - 2 * dp, mGraphPaint1);
             
             if (mGraphX + COLUMN_WIDTH > graph.getWidth()) {
                 mGraphX = 0;
                 graph.save();
-                graph.clipRect(new Rect(30, 0, graph.getWidth(), graph.getHeight()));
+                graph.clipRect(new Rect((int) (30 * dp), 0, graph.getWidth(), graph.getHeight()));
                 graph.drawColor(0, PorterDuff.Mode.CLEAR);
                 graph.restore();
             }
@@ -667,11 +680,17 @@ public class Slate extends View {
         
         mGraphX += STEP;
         
-        final int x = 96;
-        final int y = 64;
-        
+        final int x = (int) (48 * dp);
+        final int y = (int) (48 * dp);
+
+        final Rect graphRect = new Rect(x, y, x+width, y+height);
+        graphRect.inset((int)(-4*dp), (int)(-4*dp));
+        c.save();
+        c.clipRect(graphRect);
+        c.drawColor(0x40FFFFFF);
         c.drawBitmap(mStrokeDebugGraph, x, y, null);
-        invalidate(new Rect(x, y, x+c.getWidth(), y+c.getHeight()));
+        c.restore();
+        invalidate(graphRect);
     }
 
     public void commitStroke() {

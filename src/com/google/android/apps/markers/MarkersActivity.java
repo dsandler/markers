@@ -399,7 +399,7 @@ public class MarkersActivity extends Activity
     }
 
     private void loadSettings() {
-        mPrefs = getPreferences(MODE_PRIVATE);
+        mPrefs = getSharedPreferences("Markers", MODE_PRIVATE);
 
         final String toolTag = mPrefs.getString(PREF_LAST_TOOL, null);
         if (toolTag != null) {
