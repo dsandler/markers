@@ -527,6 +527,10 @@ public class MarkersActivity extends Activity
         return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN);
     }
 
+    final static boolean hasImmersive() {
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT);
+    }
+
     public void clickLogo(View v) {
         setHUDVisibility(!getHUDVisibility(), true);
     }
@@ -538,27 +542,42 @@ public class MarkersActivity extends Activity
     @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
         if (hasSystemUiFlags()) {
-            mSlate.setSystemUiVisibility(
-                  View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | (show ? 0
-                        : ( View.SYSTEM_UI_FLAG_FULLSCREEN
-                          | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                          | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY))
-            );
+            int flags = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+
+            if (!show) {
+                flags |= View.SYSTEM_UI_FLAG_FULLSCREEN;
+            }
+
+            if (hasImmersive()) {
+                flags |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+
+                if (!show) {
+                    flags |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+                }
+            }
+
+            mSlate.setSystemUiVisibility(flags);
         }
+
+        final int actionBarHeight = mActionBarView.getHeight(); // use for animation distances
         if (!show) {
             if (hasAnimations() && animate) {
                 AnimatorSet a = new AnimatorSet();
                 AnimatorSet.Builder b = 
                         a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 1f, 0.5f))
-                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 1f, 0f));
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 1f, 0f))
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "translationY",
+                                 0f, -actionBarHeight));
                 if (mComboHudView != null) {
                     b.with(ObjectAnimator.ofFloat(mComboHudView, "alpha", 1f, 0f));
                 } else {
                     b.with(ObjectAnimator.ofFloat(mColorsView, "alpha", 1f, 0f))
-                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 1f, 0f));
+                     .with(ObjectAnimator.ofFloat(mColorsView, "translationY",
+                             0f, actionBarHeight))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 1f, 0f))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "translationX",
+                             0f, -actionBarHeight));
                 }
                 a.addListener(new AnimatorListenerAdapter() {
                     public void onAnimationEnd(Animator a) {
@@ -571,6 +590,7 @@ public class MarkersActivity extends Activity
                         mActionBarView.setVisibility(View.GONE);
                     }
                 });
+                a.setDuration(200);
                 a.start();
             } else {
                 if (mComboHudView != null) {
@@ -596,13 +616,20 @@ public class MarkersActivity extends Activity
                 AnimatorSet a = new AnimatorSet();
                 AnimatorSet.Builder b = 
                         a.play(ObjectAnimator.ofFloat(mLogoView, "alpha", 0.5f, 1f))
-                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 0f, 1f));
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "alpha", 0f, 1f))
+                         .with(ObjectAnimator.ofFloat(mActionBarView, "translationY",
+                                 -actionBarHeight, 0f));
                 if (mComboHudView != null) {
                     b.with(ObjectAnimator.ofFloat(mComboHudView, "alpha", 0f, 1f));
                 } else {
                     b.with(ObjectAnimator.ofFloat(mColorsView, "alpha", 0f, 1f))
-                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f));
+                     .with(ObjectAnimator.ofFloat(mColorsView, "translationY",
+                             actionBarHeight, 0f))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "alpha", 0f, 1f))
+                     .with(ObjectAnimator.ofFloat(mToolsView, "translationX",
+                             -actionBarHeight, 0f));
                 }
+                a.setDuration(200);
                 a.start();
             } else {
                 if (hasAnimations()) {
