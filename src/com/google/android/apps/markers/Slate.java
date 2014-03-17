@@ -17,6 +17,7 @@
 package com.google.android.apps.markers;
 
 import java.util.ArrayList;
+import java.lang.reflect.Method;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
@@ -123,6 +124,21 @@ public class Slate extends View {
     private float mPanX = 0f, mPanY = 0f;
     private int mMemClass;
     private boolean mLowMem;
+
+    private static Class<?> sHTCPenEventClass = null;
+    private static Method sHTCIsPenEventMethod = null;
+    static {
+        if ("HTC".equalsIgnoreCase(Build.MANUFACTURER) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            try {
+                sHTCPenEventClass = Class.forName(
+                    "com.htc.pen.PenEvent");
+                sHTCIsPenEventMethod = sHTCPenEventClass.getDeclaredMethod(
+                    "isPenEvent", MotionEvent.class);
+            } catch (Exception e) {
+            }
+        }
+    }
 
     public interface SlateListener {
         void strokeStarted();
@@ -863,18 +879,29 @@ public class Slate extends View {
         if (hasToolType()) {
             return me.getToolType(index);
         }
-        
-        // dirty hack for the HTC Flyer
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO) {
-            if ("flyer".equals(Build.HARDWARE)) {
-                if (me.getSize(index) <= 0.1f) {
-                    // with very high probability this is the stylus
-                    return MotionEvent.TOOL_TYPE_STYLUS;
-                }
-            }
+
+        if (isHTCPenEvent(me)) {
+            return MotionEvent.TOOL_TYPE_STYLUS;
         }
 
         return MotionEvent.TOOL_TYPE_FINGER;
+    }
+
+    /**
+     * Use reflection to determine if this is a pen event from certain HTC
+     * devices such as the Flyer and Jetstream.
+     */
+    private static boolean isHTCPenEvent(MotionEvent me) {
+        if (sHTCPenEventClass == null || sHTCIsPenEventMethod == null) {
+            return false;
+        }
+
+        try {
+            return (Boolean) sHTCIsPenEventMethod.invoke(sHTCPenEventClass, me);
+        } catch (Exception e) {
+        }
+
+        return false;
     }
 
     PointF getCenter(MotionEvent event, PointF out) {
