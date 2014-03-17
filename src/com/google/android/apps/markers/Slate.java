@@ -125,6 +125,21 @@ public class Slate extends View {
     private int mMemClass;
     private boolean mLowMem;
 
+    private static Class<?> sHTCPenEventClass = null;
+    private static Method sHTCIsPenEventMethod = null;
+    static {
+        if ("HTC".equalsIgnoreCase(Build.MANUFACTURER) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            try {
+                sHTCPenEventClass = Class.forName(
+                    "com.htc.pen.PenEvent");
+                sHTCIsPenEventMethod = sHTCPenEventClass.getDeclaredMethod(
+                    "isPenEvent", MotionEvent.class);
+            } catch (Exception e) {
+            }
+        }
+    }
+
     public interface SlateListener {
         void strokeStarted();
         void strokeEnded();
@@ -877,19 +892,12 @@ public class Slate extends View {
      * devices such as the Flyer and Jetstream.
      */
     private static boolean isHTCPenEvent(MotionEvent me) {
-        if (!"HTC".equalsIgnoreCase(Build.MANUFACTURER)) {
-            return false;
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB_MR1) {
+        if (sHTCPenEventClass == null || sHTCIsPenEventMethod == null) {
             return false;
         }
 
         try {
-            Class<?> klass = Class.forName("com.htc.pen.PenEvent");
-            Method method = klass.getDeclaredMethod(
-                "isPenEvent", MotionEvent.class);
-            return (Boolean) method.invoke(klass, me);
+            return (Boolean) sHTCIsPenEventMethod.invoke(sHTCPenEventClass, me);
         } catch (Exception e) {
         }
 
