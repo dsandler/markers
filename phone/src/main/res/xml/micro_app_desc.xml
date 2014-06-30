@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wearableApp package="org.dsandler.apps.markers">
+    <versionCode>1000</versionCode>
+    <versionName>1.0.0</versionName>
+    <path>wear.apk</path>
+</wearableApp>
+

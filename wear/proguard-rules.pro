@@ -1,0 +1,4 @@
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Application
+-keep public class * extends android.view.View
+-keep public class com.google.android.apps.markers.PressureCooker

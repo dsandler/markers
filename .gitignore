@@ -1,0 +1,10 @@
+.gradle
+local.properties
+.idea/workspace.xml
+.DS_Store
+gen
+/build
+*.iml
+phone/src/main/bin
+wear/src/main/bin
+common/src/main/bin

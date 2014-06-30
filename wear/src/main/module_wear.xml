@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_wear" default="compile.module.wear">
+  <dirname property="module.wear.basedir" file="${ant.file.module_wear}"/>
+  
+  <property name="module.jdk.home.wear" value="${jdk.home.android_api_20_platform}"/>
+  <property name="module.jdk.bin.wear" value="${jdk.bin.android_api_20_platform}"/>
+  <property name="module.jdk.classpath.wear" value="jdk.classpath.android_api_20_platform"/>
+  
+  <property name="compiler.args.wear" value="-encoding UTF-8 -source 1.6 ${compiler.args}"/>
+  
+  <property name="wear.output.dir" value="${module.wear.basedir}/../../../../../../../android/projects/markers/out/production/wear"/>
+  <property name="wear.testoutput.dir" value="${module.wear.basedir}/../../../../../../../android/projects/markers/out/test/wear"/>
+  
+  <path id="wear.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="wear.module.production.classpath">
+    <path refid="${module.jdk.classpath.wear}"/>
+    <pathelement location="${common.output.dir}"/>
+  </path>
+  
+  <path id="wear.runtime.production.module.classpath">
+    <pathelement location="${wear.output.dir}"/>
+    <path refid="common.runtime.production.module.classpath"/>
+  </path>
+  
+  <path id="wear.module.classpath">
+    <path refid="${module.jdk.classpath.wear}"/>
+    <pathelement location="${wear.output.dir}"/>
+    <pathelement location="${common.testoutput.dir}"/>
+    <pathelement location="${common.output.dir}"/>
+  </path>
+  
+  <path id="wear.runtime.module.classpath">
+    <pathelement location="${wear.testoutput.dir}"/>
+    <pathelement location="${wear.output.dir}"/>
+    <path refid="common.runtime.module.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.wear">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.wear">
+    <patternset refid="excluded.from.module.wear"/>
+  </patternset>
+  
+  <path id="wear.module.sourcepath">
+    <dirset dir="${module.wear.basedir}/../../../../../../../android/projects/markers/wear/src/main">
+      <include name="java"/>
+      <include name="res"/>
+      <include name="gen"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.wear" depends="compile.module.wear.production,compile.module.wear.tests" description="Compile module wear"/>
+  
+  <target name="compile.module.wear.production" depends="register.custom.compilers,compile.module.common" description="Compile module wear; production classes">
+    <mkdir dir="${wear.output.dir}"/>
+    <javac2 destdir="${wear.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.wear}/javac">
+      <compilerarg line="${compiler.args.wear}"/>
+      <bootclasspath refid="wear.module.bootclasspath"/>
+      <classpath refid="wear.module.production.classpath"/>
+      <src refid="wear.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.wear"/>
+    </javac2>
+    
+    <copy todir="${wear.output.dir}">
+      <fileset dir="${module.wear.basedir}/../../../../../../../android/projects/markers/wear/src/main/java">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.wear.basedir}/../../../../../../../android/projects/markers/wear/src/main/res">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.wear.basedir}/../../../../../../../android/projects/markers/wear/src/main/gen">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.wear.tests" depends="register.custom.compilers,compile.module.wear.production" description="compile module wear; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.wear" description="cleanup module">
+    <delete dir="${wear.output.dir}"/>
+    <delete dir="${wear.testoutput.dir}"/>
+  </target>
+</project>
