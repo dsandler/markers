@@ -1,30 +1,66 @@
+/*
+ * Copyright (C) 2012 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.android.apps.markers;
 
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.*;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 
 public class MarkersWearActivity extends Activity {
     private static final String TAG = "Markers";
 
     public static final boolean DEBUG = false;
-    private MicroSlateView mSlate;
+
+    private static MicroSlateView mSlate;
+    private static DismissView mDismisser;
 
     private static class MicroSlateView extends View {
         private final PressureCooker mPressureCooker;
 
         private Paint mPaint, mBlitPaint, mPointerPaint;
-        private Bitmap mBitmap;
-        private Canvas mCanvas;
+        private Bitmap mBitmap, mDrawingBitmap;
+        private Canvas mCanvas, mDrawingCanvas;
 
         private float lx, ly, lr;
+        private float sx, sy;
+        private long downTime;
+        private boolean mAbortDraw;
+
+        private static final float LONGPRESS_SLOP = 3; // dp
+        private static final long LONGPRESS_DURATION = 1000;
 
         private float dp;
+
+        private Runnable mCheckLongpress = new Runnable() {
+            @Override
+            public void run() {
+                if (SystemClock.uptimeMillis() - downTime > LONGPRESS_DURATION) {
+                    mAbortDraw = true;
+                    mDismisser.show();
+                }
+            }
+        };
 
         public MicroSlateView(Context context) {
             this(context, null);
@@ -70,6 +106,9 @@ public class MarkersWearActivity extends Activity {
                     mCanvas.drawBitmap(oldBitmap, 0, 0, mBlitPaint);
                     oldBitmap.recycle();
                 }
+
+                mDrawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                mDrawingCanvas = new Canvas(mDrawingBitmap);
             }
 
             dp = getResources().getDisplayMetrics().density;
@@ -97,28 +136,44 @@ public class MarkersWearActivity extends Activity {
             final int action = event.getAction();
             switch (action) {
                 case MotionEvent.ACTION_DOWN:
-                    mCanvas.drawCircle(x, y, r, mPaint);
-                    invalidate();
+                    sx = x;
+                    sy = y;
+                    downTime = event.getEventTime();
+                    mAbortDraw = false;
+                    mDrawingCanvas.drawCircle(x, y, r, mPaint);
+                    postDelayed(mCheckLongpress, LONGPRESS_DURATION);
                     break;
                 case MotionEvent.ACTION_MOVE:
                 case MotionEvent.ACTION_UP:
+                    if (Math.abs(x - sx + y - sy) > LONGPRESS_SLOP) {
+                        removeCallbacks(mCheckLongpress);
+                    }
+                    // fall through
                     for (float t=step; t<1; t+=step) {
-                        mCanvas.drawCircle(lerp(lx, x, t),
+                        mDrawingCanvas.drawCircle(lerp(lx, x, t),
                                            lerp(ly, y, t),
                                            lerp(lr, r, t),
                                            mPaint);
                     }
-                    mCanvas.drawCircle(x, y, r, mPaint);
+                    mDrawingCanvas.drawCircle(x, y, r, mPaint);
                     invalidate();
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    mAbortDraw = true;
                     break;
             }
 
-            if (action != MotionEvent.ACTION_UP) {
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
                 lx = x;
                 ly = y;
                 lr = r;
-            } else {
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                 lx = ly = lr = 0;
+                removeCallbacks(mCheckLongpress);
+                if (!mAbortDraw) {
+                    mCanvas.drawBitmap(mDrawingBitmap, 0, 0, mBlitPaint);
+                }
+                clearCanvas(mDrawingCanvas);
             }
             return true;
         }
@@ -129,6 +184,7 @@ public class MarkersWearActivity extends Activity {
             if (mBitmap != null) {
                 //c.drawColor(Color.WHITE);
                 c.drawBitmap(mBitmap, 0, 0, mBlitPaint);
+                c.drawBitmap(mDrawingBitmap, 0, 0, mBlitPaint);
             } else {
                 c.drawColor(0xFFFF0000);
             }
@@ -143,17 +199,28 @@ public class MarkersWearActivity extends Activity {
 
         public void reset() {
             lx = ly = lr = 0;
-            mCanvas.drawColor(0, PorterDuff.Mode.SRC);
+            clearCanvas(mCanvas);
             invalidate();
         }
+    }
+
+    private static void clearCanvas(Canvas c) {
+        c.drawColor(0, PorterDuff.Mode.SRC);
     }
 
     @Override
     public void onCreate(Bundle b) {
         super.onCreate(b);
         Log.d(TAG, "onCreate");
+
         mSlate = new MicroSlateView(this);
-        setContentView(mSlate);
+        mDismisser = new DismissView(this);
+
+        FrameLayout fl = new FrameLayout(this);
+        fl.addView(mSlate);
+        fl.addView(mDismisser);
+
+        setContentView(fl);
     }
 
     @Override

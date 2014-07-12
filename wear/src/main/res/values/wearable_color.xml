@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- DismissView -->
+    <color name="dismiss_overlay_bg">#80000000</color>
+    <color name="dismiss_close">#FF5151</color>
+    <color name="dismiss_close_pressed">#B83120</color>
+
+    <color name="primary_text_light">#434343</color>
+    <color name="secondary_text_light">#A2A2A2</color>
+    <color name="disabled_text_light">#E0E0E0</color>
+
+    <color name="primary_text_dark">#FFFFFF</color>
+</resources>

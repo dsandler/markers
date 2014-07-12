@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- DismissView -->
+    <style name="TextAppearance.Wearable.Large" parent="android:TextAppearance.Medium">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/primary_text_light</item>
+    </style>
+    <style name="TextView.Large" parent="@android:style/Widget.Holo.Light">
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:textAppearance">@style/TextAppearance.Wearable.Large</item>
+    </style>
+    <style name="TextView.Large.Light">
+        <item name="android:fontFamily">sans-serif-condensed-light</item>
+        <item name="android:textAppearance">@style/TextAppearance.Wearable.Large</item>
+    </style>
+    <style name="DismissOverlayText" parent="TextView.Large.Light">
+        <item name="android:background">@color/dismiss_close</item>
+        <item name="android:gravity">center</item>
+        <item name="android:lineSpacingExtra">-2sp</item>
+        <item name="android:textColor">@color/primary_text_dark</item>
+    </style>
+</resources>
