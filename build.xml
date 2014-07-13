@@ -26,6 +26,14 @@
 			  />
 	</target>
 
+	<target name="wear-debug-install" depends="wear-debug">
+		<exec executable="adb" failonerror="true">
+			<arg value="install" />
+			<arg value="-r" />
+			<arg value="wear/src/main/bin/MarkersWearActivity-debug.apk" />
+		</exec>
+	</target>
+
 	<target name="phone-debug">
 		<ant dir="phone/src/main" target="debug" />
 	</target>
@@ -88,6 +96,18 @@
 			<arg value="start" />
 			<arg value="-n" />
 			<arg value="org.dsandler.apps.markers/com.google.android.apps.markers.MarkersActivity" />
+		</exec>
+	</target>
+
+	<target name="wear-start" description="Start Wearable App">
+		<echo>Starting Markers on wearable...</echo>
+
+		<exec executable="adb" failonerror="true">
+			<arg value="shell" />
+			<arg value="am" />
+			<arg value="start" />
+			<arg value="-n" />
+			<arg value="org.dsandler.apps.markers/com.google.android.apps.markers.MarkersWearActivity" />
 		</exec>
 	</target>
 </project>

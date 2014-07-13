@@ -23,18 +23,11 @@ import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.*;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.util.Log;
-import android.view.HapticFeedbackConstants;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.accessibility.AccessibilityEvent;
 
-import android.widget.FrameLayout;
 import org.dsandler.apps.markers.R;
 
 public class ToolButton extends View implements View.OnLongClickListener, View.OnClickListener {
@@ -133,26 +126,27 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
             super.onDraw(canvas);
             
             mPaint.setColor(mFgColor.getColorForState(getDrawableState(), mFgColor.getDefaultColor()));
+            final boolean square = getHeight() == getWidth();
             final boolean vertical = getHeight() > getWidth();
-
+            final float center = (vertical ? getWidth() : getHeight()) / 2;
             float r1 = strokeWidthMin * 0.5f;
             float r2 = strokeWidthMax * 0.5f;
 
-            final float center = (vertical ? getWidth() : getHeight()) / 2;
-
             if (r1 > center) r1 = center;
             if (r2 > center) r2 = center;
-
             final float start = (vertical ? getPaddingTop() : getPaddingLeft()) + r1;
             final float end = (vertical ? (getHeight() - getPaddingBottom()) : (getWidth() - getPaddingRight())) - r2;
-            final float iter = 1f / (vertical ? getHeight() : getWidth());
-            final float amplitude = (center-r2)*0.5f;
 
-            for (float f = 0f; f < 1.0f; f += iter) {
-                final float y = Slate.lerp(start, end, f);
-                final float x = (float) (center + amplitude*Math.sin(f * 2*Math.PI));
-                final float r = Slate.lerp(r1, r2, f);
-                canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, mPaint);
+            if (!square) {
+                final float iter = 1f / (vertical ? getHeight() : getWidth());
+                final float amplitude = (center - r2) * 0.5f;
+
+                for (float f = 0f; f < 1.0f; f += iter) {
+                    final float y = Slate.lerp(start, end, f);
+                    final float x = (float) (center + amplitude * Math.sin(f * 2 * Math.PI));
+                    final float r = Slate.lerp(r1, r2, f);
+                    canvas.drawCircle(vertical ? x : y, vertical ? y : x, r, mPaint);
+                }
             }
             canvas.drawCircle(vertical ? center : end, vertical ? end : center, r2, mPaint);
 
@@ -263,7 +257,7 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
     }
 
     public static class SwatchButton extends ToolButton {
-        public int color;
+        private int color;
         private Drawable mTransparentTile;
         
         public SwatchButton(Context context, AttributeSet attrs, int defStyle) {
@@ -272,7 +266,7 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
             TypedArray a = context.obtainStyledAttributes(attrs, 
                     R.styleable.SwatchButton, defStyle, 0);
             
-            color = a.getColor(R.styleable.SwatchButton_color, 0xFFFFFF00);
+            setColor(a.getColor(R.styleable.SwatchButton_color, 0xFFFFFF00));
 
             a.recycle();
         }
@@ -285,7 +279,7 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
         void activate() {
             super.activate();
             final ToolCallback cb = getCallback();
-            if (cb != null) cb.setPenColor(this, color);
+            if (cb != null) cb.setPenColor(this, getColor());
         }
         final int HIGHLIGHT_STROKE_COLOR = 0xFFFFFFFF;
         final int HIGHLIGHT_STROKE_COLOR_ALT = 0xFFC0C0C0;
@@ -303,16 +297,16 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
             if (mPaint == null) return;
 
             int p = this.getPaddingLeft();
-            if ((color & 0xFF000000) == 0) { // transparent
+            if ((getColor() & 0xFF000000) == 0) { // transparent
                 mTransparentTile.setBounds(canvas.getClipBounds());
                 mTransparentTile.draw(canvas);
             } else {
-                canvas.drawColor(color);
+                canvas.drawColor(getColor());
             }
             if (isSelected() || isPressed()) {
                 mPaint.setStyle(Paint.Style.STROKE);
                 mPaint.setStrokeWidth(p);
-                mPaint.setColor(color == HIGHLIGHT_STROKE_COLOR 
+                mPaint.setColor(getColor() == HIGHLIGHT_STROKE_COLOR
                         ? HIGHLIGHT_STROKE_COLOR_ALT 
                         : HIGHLIGHT_STROKE_COLOR);
                 p /= 2;
@@ -323,8 +317,16 @@ public class ToolButton extends View implements View.OnLongClickListener, View.O
         @Override
         public boolean onLongClick(View v) {
             final ToolCallback cb = getCallback();
-            if (cb != null) cb.setBackgroundColor(this, color);
+            if (cb != null) cb.setBackgroundColor(this, getColor());
             return true;
+        }
+
+        public int getColor() {
+            return color;
+        }
+
+        public void setColor(int color) {
+            this.color = color;
         }
     }
 

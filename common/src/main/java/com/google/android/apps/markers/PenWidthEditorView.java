@@ -23,9 +23,10 @@ import android.view.MotionEvent;
 import android.view.View;
 
 public class PenWidthEditorView extends View {
-    static final float WIDTH_MIN = 0.25f; // px
-    static final float WIDTH_MAX = 256f; // px
     static final float TEXT_DP = 16;
+
+    float mMinAllowed = 0.25f; // px
+    float mMaxAllowed = 256f; // px
 
     private float mTextSize;
     private float mTouchFudge;
@@ -68,11 +69,16 @@ public class PenWidthEditorView extends View {
         mTouchFudge = 5 * density; // make the radius this many dp smaller
     }
 
+    public void setAllowedSizes(float a, float b) {
+        mMinAllowed = a;
+        mMaxAllowed = b;
+    }
+
     PointF getStartPoint() {
         final boolean vertical = getHeight() > getWidth();
         final float center = (vertical ? getWidth() : getHeight()) / 2;
         final float quarter = (vertical ? getPaddingTop() : getPaddingLeft())
-                + WIDTH_MAX*0.5f;
+                + mMaxAllowed *0.5f;
         return new PointF(vertical ? center : quarter, vertical ? quarter : center);
     }
 
@@ -80,7 +86,7 @@ public class PenWidthEditorView extends View {
         final boolean vertical = getHeight() > getWidth();
         final float center = (vertical ? getWidth() : getHeight()) / 2;
         final float quarter = (vertical ? getHeight() - getPaddingBottom() : getWidth() - getPaddingRight())
-                - WIDTH_MAX*0.5f;
+                - mMaxAllowed *0.5f;
         return new PointF(vertical ? center : quarter, vertical ? quarter : center);
     }
 
@@ -98,8 +104,8 @@ public class PenWidthEditorView extends View {
         final float center = (vertical ? getWidth() : getHeight()) / 2;
         final float amplitude = (center-r2)*0.5f;
 
-        r1 = Slate.clamp(0.5f*WIDTH_MIN, 0.5f*WIDTH_MAX, r1);
-        r2 = Slate.clamp(0.5f*WIDTH_MIN, 0.5f*WIDTH_MAX, r2);
+        r1 = Slate.clamp(0.5f* mMinAllowed, 0.5f* mMaxAllowed, r1);
+        r2 = Slate.clamp(0.5f* mMinAllowed, 0.5f* mMaxAllowed, r2);
 
         final float iter = Math.min(8f,r1) / (vertical ? getHeight() : getWidth());
 
@@ -185,9 +191,9 @@ public class PenWidthEditorView extends View {
                 }
 
                 dist = mTouchingMin ? d1 : d2;
-                dist = Slate.clamp(0.5f*WIDTH_MIN, 0.5f*WIDTH_MAX, dist - mTouchFudge);
+                dist = Slate.clamp(0.5f* mMinAllowed, 0.5f* mMaxAllowed, dist - mTouchFudge);
                 // make it easier to target finer weights more exactly
-                dist = (float) Math.pow(dist/(0.5f*WIDTH_MAX),3)*0.5f*WIDTH_MAX;
+                dist = (float) Math.pow(dist/(0.5f* mMaxAllowed),3)*0.5f* mMaxAllowed;
 
                 if (mTouchingMin || mTouchingMax) {
                     if (mTouchingMin) {

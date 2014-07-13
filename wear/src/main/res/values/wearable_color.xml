@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- DismissView -->
-    <color name="dismiss_overlay_bg">#80000000</color>
+    <color name="hud_bg">#80000000</color>
     <color name="dismiss_close">#FF5151</color>
     <color name="dismiss_close_pressed">#B83120</color>
 

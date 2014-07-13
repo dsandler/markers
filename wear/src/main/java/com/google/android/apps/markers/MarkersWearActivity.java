@@ -32,23 +32,26 @@ public class MarkersWearActivity extends Activity {
 
     public static final boolean DEBUG = false;
 
-    private static MicroSlateView mSlate;
-    private static DismissView mDismisser;
+    private static MicroSlateView sSlate;
+    private static HudView sHud;
 
-    private static class MicroSlateView extends View {
+    static class MicroSlateView extends View {
+        private static final float LONGPRESS_SLOP = 10; // dp
+        private static final long LONGPRESS_DURATION = 1000;
+
         private final PressureCooker mPressureCooker;
 
         private Paint mPaint, mBlitPaint, mPointerPaint;
-        private Bitmap mBitmap, mDrawingBitmap;
-        private Canvas mCanvas, mDrawingCanvas;
+        private Bitmap mBitmap, mPrevBitmap;
+        private Canvas mDrawingCanvas, mPrevCanvas;
 
         private float lx, ly, lr;
         private float sx, sy;
         private long downTime;
         private boolean mAbortDraw;
 
-        private static final float LONGPRESS_SLOP = 3; // dp
-        private static final long LONGPRESS_DURATION = 1000;
+        private float penMin = 2;
+        private float penMax = 20;
 
         private float dp;
 
@@ -57,7 +60,7 @@ public class MarkersWearActivity extends Activity {
             public void run() {
                 if (SystemClock.uptimeMillis() - downTime > LONGPRESS_DURATION) {
                     mAbortDraw = true;
-                    mDismisser.show();
+                    sHud.show();
                 }
             }
         };
@@ -73,19 +76,54 @@ public class MarkersWearActivity extends Activity {
         public MicroSlateView(Context context, AttributeSet attrs, int defStyleAttr) {
             super(context, attrs, defStyleAttr);
 
-            mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            mPaint.setColor(Color.BLACK);
-            mBlitPaint = new Paint();
-            mBlitPaint.setColor(Color.BLACK);
-            mPointerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            mPointerPaint.setStyle(Paint.Style.STROKE);
-            mPointerPaint.setStrokeWidth(2);
-            mPointerPaint.setColor(0x80808080);
-
             mPressureCooker = new PressureCooker(getContext(),
                     0f, 0.25f); // HACK: default pressure values adjusted for Wear
 
             setWillNotDraw(false);
+
+            setupPaints();
+        }
+
+        public void setPenColor(int color) {
+            if (color == 0) {
+                // eraser: DST_OUT
+                mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
+                mPaint.setColor(Color.BLACK);
+            } else {
+                mPaint.setXfermode(null);
+                mPaint.setColor(Color.BLACK);
+                mPaint.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP));
+            }
+        }
+
+        public void setPenMin(float min) {
+            penMin = min;
+        }
+
+        public void setPenMax(float max) {
+            penMax = max;
+        }
+
+        public float getPenMin() {
+            return penMin;
+        }
+
+        public float getPenMax() {
+            return penMax;
+        }
+
+        private void setupPaints() {
+            dp = getResources().getDisplayMetrics().density;
+
+            mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mPaint.setColor(Color.BLACK);
+            mBlitPaint = new Paint();
+            mBlitPaint.setColor(Color.BLACK);
+            mBlitPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+            mPointerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mPointerPaint.setStyle(Paint.Style.STROKE);
+            mPointerPaint.setStrokeWidth(2 * dp);
+            mPointerPaint.setColor(0x80808080);
         }
 
         @Override
@@ -101,17 +139,15 @@ public class MarkersWearActivity extends Activity {
                 final Bitmap oldBitmap = mBitmap;
                 mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
                 Log.v(TAG, String.format("new bitmap: (%d x %d)", mBitmap.getWidth(), mBitmap.getHeight()));
-                mCanvas = new Canvas(mBitmap);
+                mDrawingCanvas = new Canvas(mBitmap);
                 if (oldBitmap != null) {
-                    mCanvas.drawBitmap(oldBitmap, 0, 0, mBlitPaint);
+                    mDrawingCanvas.drawBitmap(oldBitmap, 0, 0, mBlitPaint);
                     oldBitmap.recycle();
                 }
 
-                mDrawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                mDrawingCanvas = new Canvas(mDrawingBitmap);
+                mPrevBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                mPrevCanvas = new Canvas(mPrevBitmap);
             }
-
-            dp = getResources().getDisplayMetrics().density;
         }
 
         static float lerp(float a, float b, float t) {
@@ -124,12 +160,12 @@ public class MarkersWearActivity extends Activity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (mCanvas == null) return false;
+            if (mDrawingCanvas == null) return false;
             final float x = event.getX(0);
             final float y = event.getY(0);
             final float p = Math.max(0, mPressureCooker.getAdjustedPressure(event.getPressure(0)));
             final float s = event.getSize(0);
-            final float r = lerp(2, 20, p) * dp;
+            final float r = lerp(penMin, penMax, p) * dp;
             final float d = (float) Math.hypot(x-lx, y-ly);
             final float step = 1f/d;
             if (DEBUG) Log.v(TAG, String.format("touch: (%.1f,%.1f) p=%.3f s=%.3f", x, y, p, s));
@@ -145,7 +181,7 @@ public class MarkersWearActivity extends Activity {
                     break;
                 case MotionEvent.ACTION_MOVE:
                 case MotionEvent.ACTION_UP:
-                    if (Math.abs(x - sx + y - sy) > LONGPRESS_SLOP) {
+                    if (Math.abs(x - sx + y - sy) > LONGPRESS_SLOP*dp) {
                         removeCallbacks(mCheckLongpress);
                     }
                     // fall through
@@ -170,10 +206,11 @@ public class MarkersWearActivity extends Activity {
             } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                 lx = ly = lr = 0;
                 removeCallbacks(mCheckLongpress);
-                if (!mAbortDraw) {
-                    mCanvas.drawBitmap(mDrawingBitmap, 0, 0, mBlitPaint);
+                if (mAbortDraw) {
+                    mDrawingCanvas.drawBitmap(mPrevBitmap, 0, 0, mBlitPaint);
+                } else {
+                    mPrevCanvas.drawBitmap(mBitmap, 0, 0, mBlitPaint);
                 }
-                clearCanvas(mDrawingCanvas);
             }
             return true;
         }
@@ -183,13 +220,12 @@ public class MarkersWearActivity extends Activity {
             super.onDraw(c);
             if (mBitmap != null) {
                 //c.drawColor(Color.WHITE);
-                c.drawBitmap(mBitmap, 0, 0, mBlitPaint);
-                c.drawBitmap(mDrawingBitmap, 0, 0, mBlitPaint);
+                c.drawBitmap(mBitmap, 0, 0, null);
             } else {
                 c.drawColor(0xFFFF0000);
             }
             if (lr > 0) {
-                c.drawCircle(lx, ly, lr, mPointerPaint);
+                c.drawCircle(lx, ly, lr + 4*dp, mPointerPaint);
             }
 
             if (DEBUG) {
@@ -199,13 +235,16 @@ public class MarkersWearActivity extends Activity {
 
         public void reset() {
             lx = ly = lr = 0;
-            clearCanvas(mCanvas);
+            clearCanvas(mDrawingCanvas);
+            clearCanvas(mPrevCanvas);
             invalidate();
         }
     }
 
     private static void clearCanvas(Canvas c) {
-        c.drawColor(0, PorterDuff.Mode.SRC);
+        if (c != null) {
+            c.drawColor(0, PorterDuff.Mode.SRC);
+        }
     }
 
     @Override
@@ -213,12 +252,14 @@ public class MarkersWearActivity extends Activity {
         super.onCreate(b);
         Log.d(TAG, "onCreate");
 
-        mSlate = new MicroSlateView(this);
-        mDismisser = new DismissView(this);
+        sSlate = new MicroSlateView(this);
+        sHud = new HudView(this);
+        sHud.setActivity(this);
+        sHud.setSlate(sSlate);
 
         FrameLayout fl = new FrameLayout(this);
-        fl.addView(mSlate);
-        fl.addView(mDismisser);
+        fl.addView(sSlate);
+        fl.addView(sHud);
 
         setContentView(fl);
     }
@@ -232,6 +273,6 @@ public class MarkersWearActivity extends Activity {
     @Override
     public void onPause() {
         super.onPause();
-        mSlate.reset();
+        //sSlate.reset();
     }
 }
