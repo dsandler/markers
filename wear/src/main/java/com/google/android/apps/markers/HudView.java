@@ -14,7 +14,7 @@ import org.dsandler.apps.markers.R;
  * Adapted from DismissOverlayView.
  */
 public class HudView extends FrameLayout {
-    private View mDismissButton;
+    private View mDismissButton, mShareButton;
     private Activity mActivity;
     private MarkersWearActivity.MicroSlateView mSlate;
     private ToolButton.PenToolButton mPenTool;
@@ -40,6 +40,15 @@ public class HudView extends FrameLayout {
             @Override
             public void onClick(View v) {
                 mActivity.finish();
+            }
+        });
+
+        mShareButton = findViewById(R.id.share_button);
+        mShareButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mSlate.doShare();
+                hide();
             }
         });
 

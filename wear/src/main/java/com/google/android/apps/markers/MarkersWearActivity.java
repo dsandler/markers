@@ -19,6 +19,7 @@ package com.google.android.apps.markers;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.*;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.AttributeSet;
@@ -26,6 +27,15 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Asset;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
+
+import java.io.*;
+import java.util.concurrent.TimeUnit;
 
 public class MarkersWearActivity extends Activity {
     private static final String TAG = "Markers";
@@ -239,6 +249,39 @@ public class MarkersWearActivity extends Activity {
             clearCanvas(mPrevCanvas);
             invalidate();
         }
+
+        private static Asset createAssetFromBitmap(Bitmap bitmap) {
+            final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+            return Asset.createFromBytes(byteStream.toByteArray());
+        }
+
+        public void doShare() {
+            final Asset asset = createAssetFromBitmap(mBitmap);
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... voids) {
+                    Log.v(TAG, "Created asset: " + asset);
+
+                    PutDataRequest request = PutDataRequest.create("/image");
+                    request.putAsset("drawing", asset);
+                    Log.v(TAG, "Putting data item: " + request);
+
+                    GoogleApiClient googleApiClient = WearableUtils.getApiClient(getContext());
+
+                    ConnectionResult connectionResult =
+                            googleApiClient.blockingConnect(30, TimeUnit.SECONDS);
+
+                    if (!connectionResult.isSuccess()) {
+                        Log.e(TAG, "Failed to connect to GoogleApiClient.");
+                        return null;
+                    }
+
+                    Wearable.DataApi.putDataItem(googleApiClient, request);
+                    return null;
+                }
+            }.execute();
+        }
     }
 
     private static void clearCanvas(Canvas c) {
@@ -253,6 +296,7 @@ public class MarkersWearActivity extends Activity {
         Log.d(TAG, "onCreate");
 
         sSlate = new MicroSlateView(this);
+
         sHud = new HudView(this);
         sHud.setActivity(this);
         sHud.setSlate(sSlate);
