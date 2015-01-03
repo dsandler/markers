@@ -18,6 +18,7 @@ package com.google.android.apps.markers;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.*;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -28,11 +29,17 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import android.support.wearable.activity.ConfirmationActivity;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.Asset;
+import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
+import org.dsandler.apps.markers.R;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
@@ -258,6 +265,7 @@ public class MarkersWearActivity extends Activity {
 
         public void doShare() {
             final Asset asset = createAssetFromBitmap(mBitmap);
+            final Context _context = getContext();
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... voids) {
@@ -267,7 +275,7 @@ public class MarkersWearActivity extends Activity {
                     request.putAsset("drawing", asset);
                     Log.v(TAG, "Putting data item: " + request);
 
-                    GoogleApiClient googleApiClient = WearableUtils.getApiClient(getContext());
+                    GoogleApiClient googleApiClient = WearableUtils.getApiClient(_context);
 
                     ConnectionResult connectionResult =
                             googleApiClient.blockingConnect(30, TimeUnit.SECONDS);
@@ -277,7 +285,20 @@ public class MarkersWearActivity extends Activity {
                         return null;
                     }
 
-                    Wearable.DataApi.putDataItem(googleApiClient, request);
+                    final PendingResult<DataApi.DataItemResult> result
+                            = Wearable.DataApi.putDataItem(googleApiClient, request);
+                    final boolean ok = result.await().getDataItem() != null;
+
+                    final Intent intent = new Intent(_context, ConfirmationActivity.class);
+                    intent.putExtra(ConfirmationActivity.EXTRA_ANIMATION_TYPE,
+                            ok ? ConfirmationActivity.OPEN_ON_PHONE_ANIMATION // SUCCESS_ANIMATION
+                               : ConfirmationActivity.FAILURE_ANIMATION);
+//                    intent.putExtra(ConfirmationActivity.EXTRA_MESSAGE,
+//                            _context.getString(
+//                                    ok ? R.string.shared_confirm
+//                                       : R.string.shared_error));
+                    _context.startActivity(intent);
+
                     return null;
                 }
             }.execute();

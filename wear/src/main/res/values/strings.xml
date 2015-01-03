@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Markers</string>
+    <string name="shared_confirm">Drawing sent to phone</string>
+    <string name="shared_error">That didn’t work</string>
 </resources>
