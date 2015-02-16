@@ -12,6 +12,23 @@
             unless="sdk.dir"
     />
 
+	<target name="help">
+		<echo>
+Recognized targets:
+	ant wear-debug  # build the wear app
+	ant wear-debug-asset # the above, plus copy into position
+	ant phone-debug # build the phone app, including the wear asset
+	ant debug       # all of the above
+	ant installd    # all of the above, plus install
+	ant start		# start Markers on phone
+
+	ant wear-debug-install # if you have the watch attached by usb
+	ant wear-start  # start Markers on attached watch
+
+Substitute "debug" for "release".
+		</echo>
+	</target>
+
 	<!-- debug targets -->
 	<target name="wear-debug">
 		<ant dir="wear/src/main" target="debug" />
