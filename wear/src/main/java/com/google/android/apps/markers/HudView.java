@@ -47,7 +47,7 @@ public class HudView extends FrameLayout {
         mShareButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mSlate.doShare();
+                mSlate.doSave(/*animate=*/ true);
                 hide();
             }
         });

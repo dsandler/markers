@@ -34,12 +34,10 @@ import android.support.wearable.activity.ConfirmationActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
-import org.dsandler.apps.markers.R;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +46,8 @@ public class MarkersWearActivity extends Activity {
     private static final String TAG = "Markers";
 
     public static final boolean DEBUG = false;
+
+    public static final boolean SAVE_ON_PAUSE = true;
 
     private static MicroSlateView sSlate;
     private static HudView sHud;
@@ -61,6 +61,8 @@ public class MarkersWearActivity extends Activity {
         private Paint mPaint, mBlitPaint, mPointerPaint;
         private Bitmap mBitmap, mPrevBitmap;
         private Canvas mDrawingCanvas, mPrevCanvas;
+
+        private boolean mDirty = false;
 
         private float lx, ly, lr;
         private float sx, sy;
@@ -167,6 +169,10 @@ public class MarkersWearActivity extends Activity {
             }
         }
 
+        public Bitmap getBitmap() {
+            return mBitmap;
+        }
+
         static float lerp(float a, float b, float t) {
             return a + (b-a)*t;
         }
@@ -227,6 +233,7 @@ public class MarkersWearActivity extends Activity {
                     mDrawingCanvas.drawBitmap(mPrevBitmap, 0, 0, mBlitPaint);
                 } else {
                     mPrevCanvas.drawBitmap(mBitmap, 0, 0, mBlitPaint);
+                    mDirty = true;
                 }
             }
             return true;
@@ -263,9 +270,9 @@ public class MarkersWearActivity extends Activity {
             return Asset.createFromBytes(byteStream.toByteArray());
         }
 
-        public void doShare() {
-            final Asset asset = createAssetFromBitmap(mBitmap);
+        public void doSave(final boolean animate) {
             final Context _context = getContext();
+            final Asset asset = createAssetFromBitmap(mBitmap);
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... voids) {
@@ -289,20 +296,29 @@ public class MarkersWearActivity extends Activity {
                             = Wearable.DataApi.putDataItem(googleApiClient, request);
                     final boolean ok = result.await().getDataItem() != null;
 
+                    mDirty = false;
+
+                    if (!animate) return null;
+
                     final Intent intent = new Intent(_context, ConfirmationActivity.class);
                     intent.putExtra(ConfirmationActivity.EXTRA_ANIMATION_TYPE,
                             ok ? ConfirmationActivity.OPEN_ON_PHONE_ANIMATION // SUCCESS_ANIMATION
                                : ConfirmationActivity.FAILURE_ANIMATION);
-//                    intent.putExtra(ConfirmationActivity.EXTRA_MESSAGE,
-//                            _context.getString(
-//                                    ok ? R.string.shared_confirm
-//                                       : R.string.shared_error));
+    //                    intent.putExtra(ConfirmationActivity.EXTRA_MESSAGE,
+    //                            _context.getString(
+    //                                    ok ? R.string.shared_confirm
+    //                                       : R.string.shared_error));
                     _context.startActivity(intent);
 
                     return null;
                 }
             }.execute();
         }
+
+        public boolean isDirty() {
+            return mDirty;
+        }
+
     }
 
     private static void clearCanvas(Canvas c) {
@@ -337,7 +353,11 @@ public class MarkersWearActivity extends Activity {
 
     @Override
     public void onPause() {
+        if (SAVE_ON_PAUSE) {
+            if (sSlate.isDirty()) {
+                sSlate.doSave(/*animate=*/ false);
+            }
+        }
         super.onPause();
-        //sSlate.reset();
     }
 }
