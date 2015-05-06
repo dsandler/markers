@@ -20,8 +20,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.*;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -34,10 +36,7 @@ import android.support.wearable.activity.ConfirmationActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.wearable.Asset;
-import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.PutDataRequest;
-import com.google.android.gms.wearable.Wearable;
+import com.google.android.gms.wearable.*;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
@@ -159,13 +158,16 @@ public class MarkersWearActivity extends Activity {
                 mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
                 Log.v(TAG, String.format("new bitmap: (%d x %d)", mBitmap.getWidth(), mBitmap.getHeight()));
                 mDrawingCanvas = new Canvas(mBitmap);
-                if (oldBitmap != null) {
-                    mDrawingCanvas.drawBitmap(oldBitmap, 0, 0, mBlitPaint);
-                    oldBitmap.recycle();
-                }
 
                 mPrevBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
                 mPrevCanvas = new Canvas(mPrevBitmap);
+
+                if (oldBitmap != null) {
+                    mDrawingCanvas.drawBitmap(oldBitmap, 0, 0, mBlitPaint);
+                    oldBitmap.recycle();
+                } else {
+                    doLoad();
+                }
             }
         }
 
@@ -315,6 +317,68 @@ public class MarkersWearActivity extends Activity {
             }.execute();
         }
 
+        public void doLoad() {
+            final Context _context = getContext();
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... voids) {
+                    GoogleApiClient googleApiClient = WearableUtils.getApiClient(_context);
+
+                    ConnectionResult connectionResult =
+                            googleApiClient.blockingConnect(30, TimeUnit.SECONDS);
+
+                    if (!connectionResult.isSuccess()) {
+                        Log.e(TAG, "Failed to connect to GoogleApiClient.");
+                        return null;
+                    }
+
+                    final PendingResult<NodeApi.GetLocalNodeResult> nodeResult
+                            = Wearable.NodeApi.getLocalNode(googleApiClient);
+                    final Node node = nodeResult.await().getNode();
+
+                    final Uri requestUri = (new Uri.Builder()
+                            .scheme("wear")
+                            .authority(node.getId())
+                            .path("/image")
+                        ).build();
+                    final PendingResult<DataApi.DataItemResult> result
+                            = Wearable.DataApi.getDataItem(googleApiClient, requestUri);
+                    final DataItem di = result.await().getDataItem();
+
+                    if (di != null) {
+                        DataItemAsset diAsset = di.getAssets().get("drawing");
+                        if (diAsset != null) {
+                            PendingResult<DataApi.GetFdForAssetResult> result2
+                                    = Wearable.DataApi.getFdForAsset(googleApiClient, diAsset);
+                            final ParcelFileDescriptor pfd = result2.await().getFd();
+                            if (pfd != null) {
+                                final FileDescriptor fileDescriptor = pfd.getFileDescriptor();
+                                if (fileDescriptor != null) {
+                                    final Bitmap bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor);
+                                    if (bitmap != null) {
+                                        mDrawingCanvas.drawBitmap(bitmap, 0, 0, mBlitPaint);
+                                        mPrevCanvas.drawBitmap(bitmap, 0, 0, mBlitPaint);
+                                        postInvalidate();
+                                        Log.v(TAG, "loaded old bitmap: " + bitmap);
+                                    } else {
+                                        Log.e(TAG, "couldn't decode bitmap for asset " + diAsset);
+                                    }
+                                } else {
+                                    Log.e(TAG, "couldn't get fd from parcelfd");
+                                }
+                            }
+                        } else {
+                            Log.e(TAG, "couldn't get asset for dataitem " + di);
+                        }
+                    } else {
+                        Log.e(TAG, "couldn't get data item for uri " + requestUri + ": " + result);
+                    }
+
+                    return null;
+                }
+            }.execute();
+        }
+
         public boolean isDirty() {
             return mDirty;
         }
@@ -348,7 +412,6 @@ public class MarkersWearActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
-
     }
 
     @Override
