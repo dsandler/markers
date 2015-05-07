@@ -16,31 +16,12 @@
 
 package com.google.android.apps.markers;
 
-import java.util.ArrayList;
-
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.Paint.Style;
-import android.graphics.Path;
-import android.graphics.PathMeasure;
-import android.graphics.Point;
-import android.graphics.PointF;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.graphics.Region;
-import android.graphics.Region.Op;
+import android.graphics.*;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -90,6 +71,9 @@ public class Slate extends View {
     public static final int SHAPE_BITMAP_AIRBRUSH = 3;
     public static final int SHAPE_FOUNTAIN_PEN = 4;
 
+    public static final boolean DEBUG_SHOW_TOOL_TYPE = true;
+    public static final boolean STYLUS_BUTTON_ERASER = true;
+
     private float mPressureExponent = 2.0f;
 
     private float mRadiusMin;
@@ -124,6 +108,10 @@ public class Slate extends View {
     private float mPanX = 0f, mPanY = 0f;
     private int mMemClass;
     private boolean mLowMem;
+
+    private int mPenColor, mSaveColor;
+    private int mLastButtons;
+    private int mToolsInUse;
 
     public interface SlateListener {
         void strokeStarted();
@@ -510,6 +498,8 @@ public class Slate extends View {
             mDebugPaints[4] = new Paint();
             mDebugPaints[4].setStyle(Paint.Style.FILL);
             mDebugPaints[4].setARGB(255, 128, 128, 128);
+            mDebugPaints[4].setTextSize(res.getDisplayMetrics().density * 24);
+            mDebugPaints[4].setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL));
         }
     }
 
@@ -632,7 +622,8 @@ public class Slate extends View {
                 throw new RuntimeException("drawStrokeDebugInfo: couldn't create debug bitmap (" + width + "x" + height + ")");
             }
             mGraphPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
-            mGraphPaint1.setTextSize(10 * dp);
+            mGraphPaint1.setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL));
+            mGraphPaint1.setTextSize(16 * dp);
         }
         
         Canvas graph = new Canvas(mStrokeDebugGraph);
@@ -680,8 +671,8 @@ public class Slate extends View {
         
         mGraphX += STEP;
         
-        final int x = (int) (48 * dp);
-        final int y = (int) (48 * dp);
+        final int x = (int) (64 * dp);
+        final int y = (int) (64 * dp);
 
         final Rect graphRect = new Rect(x, y, x+width, y+height);
         graphRect.inset((int)(-4*dp), (int)(-4*dp));
@@ -767,6 +758,7 @@ public class Slate extends View {
     }
 
     public void setPenColor(int color) {
+        mPenColor = color;
         for (MarkersPlotter plotter : mStrokes) {
             // XXX: todo: only do this if the stroke hasn't begun already
             // ...or not; the current behavior allows RAINBOW MODE!!!1!
@@ -858,6 +850,27 @@ public class Slate extends View {
                 mPressureCooker.drawDebug(canvas, 60, canvas.getHeight() - 60);
             }
         }
+
+        if (DEBUG_SHOW_TOOL_TYPE) {
+            final float dp = getContext().getResources().getDisplayMetrics().density;
+            StringBuilder sb = new StringBuilder();
+            if ((mToolsInUse & (1<<MotionEvent.TOOL_TYPE_STYLUS)) != 0)
+                sb.append("STYLUS ");
+            if ((mToolsInUse & (1<<MotionEvent.TOOL_TYPE_MOUSE)) != 0)
+                sb.append("MOUSE ");
+            if ((mToolsInUse & (1<<MotionEvent.TOOL_TYPE_ERASER)) != 0)
+                sb.append("ERASER ");
+            if (sb.length() > 0) {
+                sb.insert(0, "[ ");
+                sb.append("]");
+                final String s = sb.toString();
+                float width = mDebugPaints[4].measureText(s);
+                canvas.drawText(s,
+                        canvas.getWidth() - width - 8 * dp,
+                        110 * dp,
+                        mDebugPaints[4]);
+            }
+        }
     }
 
     private static final float[] mvals = new float[9];
@@ -946,19 +959,36 @@ public class Slate extends View {
             return false;
         }
 
+        final int buttons = event.getButtonState();
+        Log.v(TAG, String.format("buttons=0x%08x", buttons));
+        if (STYLUS_BUTTON_ERASER) {
+            final int firstButton = (buttons & MotionEvent.BUTTON_SECONDARY);
+            if (firstButton != (mLastButtons & MotionEvent.BUTTON_SECONDARY)) {
+                if (firstButton != 0) {
+                    mSaveColor = mPenColor;
+                    setPenColor(0);
+                } else {
+                    setPenColor(mSaveColor);
+                }
+            }
+        }
+        mLastButtons = buttons;
+
+        mToolsInUse = 0;
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
         		|| action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             int j = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
                     ? event.getActionIndex()
                     : 0;
-            
+            final int tool = getToolTypeCompat(event, j);
+            mToolsInUse |= (1<<tool);
         	mTmpSpot.update(
         	        event.getX(j),
         			event.getY(j),
         			event.getSize(j),
         			event.getPressure(j) + event.getSize(j),
         			time,
-        			getToolTypeCompat(event, j)
+        			tool
         			);
             mStrokes[event.getPointerId(j)].add(mTmpSpot);
         	if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
@@ -971,14 +1001,15 @@ public class Slate extends View {
 
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < P; j++) {
-                	mTmpSpot.update(
+                    final int tool = getToolTypeCompat(event, j);
+                    mTmpSpot.update(
                 			event.getHistoricalX(j, i),
                 			event.getHistoricalY(j, i),
                 			event.getHistoricalSize(j, i),
                 			event.getHistoricalPressure(j, i)
                                 + event.getHistoricalSize(j, i),
                 			event.getHistoricalEventTime(i),
-                            getToolTypeCompat(event, j)
+                            tool
                 			);
                     if ((mDebugFlags & FLAG_DEBUG_STROKES) != 0) {
                         if (dbgX >= 0) {
@@ -992,6 +1023,8 @@ public class Slate extends View {
                 }
             }
             for (int j = 0; j < P; j++) {
+                final int tool = getToolTypeCompat(event, j);
+                mToolsInUse |= (1<<tool);
             	mTmpSpot.update(
             			event.getX(j),
             			event.getY(j),
@@ -1023,6 +1056,7 @@ public class Slate extends View {
                 mStrokes[event.getPointerId(j)].finish(time);
             }
             dbgX = dbgY = -1;
+            mToolsInUse = 0;
         }
         return true;
     }
