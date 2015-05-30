@@ -8,9 +8,9 @@ import android.util.FloatMath;
 import android.util.Log;
 
 public class TiledBitmapCanvas implements CanvasLite {
-    public static final String TAG = "Markers/TiledBitmapCanvas";
+    public static final String TAG = "Markers/TBC";
 
-    public static final boolean DEBUG_TILES_ON_COMMIT = false;
+    public static final boolean DEBUG_TILES_ON_COMMIT = true;
     private static final boolean DEBUG_VERBOSE = false;
 
     public static final int DEFAULT_TILE_SIZE = 256;
@@ -158,12 +158,12 @@ public class TiledBitmapCanvas implements CanvasLite {
             if (i > 0) {
                 versions.subList(0, i).clear();
                 final int oldTop = top;
+                top = versions.get(0).version;
                 if (mDebug) {
                     Log.v(TAG, String.format("   tile [%2d,%2d]: revert(%d) old top %d, %s",
                             x, y, toVersion, oldTop,
                             debugVersions()));
                 }
-                top = versions.get(0).version;
             }
         }
     }
@@ -396,16 +396,24 @@ public class TiledBitmapCanvas implements CanvasLite {
             mBottomVersion++;
         }
         mVersionInUse = false;
-        if (DEBUG_TILES_ON_COMMIT) {
+        if (mDebug && DEBUG_TILES_ON_COMMIT) {
             Log.v(TAG, "commit: next=" + mNewVersion + " top=" + (mNewVersion-1) + " bot=" + mBottomVersion);
             for (int i=0; i<mTiles.length; i++) {
                 final Tile tile = mTiles[i];
-                Log.v(TAG, String.format("   %2d [%2d,%2d]: %s",
-                        i,
-                        tile.x, tile.y,
-                        tile.debugVersions()
-                        ));
+                if (tile.top == mNewVersion - 1) {
+                    Log.v(TAG, String.format("   %2d [%2d,%2d]: %s",
+                            i,
+                            tile.x, tile.y,
+                            tile.debugVersions()
+                    ));
+                }
             }
+        }
+    }
+
+    public void discard() {
+        if (mVersionInUse) {
+            step(-1);
         }
     }
 

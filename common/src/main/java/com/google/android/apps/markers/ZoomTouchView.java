@@ -27,7 +27,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 
-public class ZoomTouchView extends View {
+public class ZoomTouchView extends View implements Slate.ZoomController {
     public static final String TAG = Slate.TAG;
 
     public static final boolean DEBUG = false;
@@ -46,6 +46,7 @@ public class ZoomTouchView extends View {
 
     private Matrix mInitialZoomMatrix = new Matrix();
     private Paint mZoomPaint;
+    private boolean mTemporaryZoom;
 
     public ZoomTouchView(Context context) {
         this(context, null);
@@ -60,6 +61,35 @@ public class ZoomTouchView extends View {
         
         mZoomPaint = new Paint();
         mZoomPaint.setTextSize(25f);
+
+        setEnabled(false);
+    }
+
+    public void startZoom() {
+        setEnabled(true);
+        mSlate.setZoomMode(true);
+        mTemporaryZoom = false;
+    }
+
+    public void startTemporaryZoom(MotionEvent anEvent) {
+        startZoom();
+        mTemporaryZoom = true;
+        // initialize kind of like ACTION_DOWN
+        mTouchTime = anEvent.getEventTime();
+        mTouchPoint[0] = mTouchPoint[1] = -1;
+    }
+
+    public void stopZoom() {
+        setEnabled(false);
+        mSlate.setZoomMode(false);
+    }
+
+    public boolean isZooming() {
+        return isEnabled();
+    }
+
+    public boolean onZoomTouchEvent(MotionEvent event) {
+        return onTouchEvent(event);
     }
 
     float[] getCenter(MotionEvent event, float[] pt) {
@@ -119,7 +149,7 @@ public class ZoomTouchView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
 
-        if (isEnabled()) {
+        if (isZooming()) {
             ViewConfiguration vc = ViewConfiguration.get(getContext());
             //final Matrix currentM = mSlate.getMatrix();
 
@@ -177,6 +207,13 @@ public class ZoomTouchView extends View {
                     mTouchTime = 0; // no double tap now
                 }
             }
+
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (mTemporaryZoom) {
+                    stopZoom();
+                }
+            }
+
             if (DEBUG_OVERLAY) invalidate();
             return true;
         }
@@ -185,6 +222,7 @@ public class ZoomTouchView extends View {
 
     public void setSlate(Slate slate) {
         mSlate = slate;
+        mSlate.setZoomController(this);
     }
 
     private static final float[] mvals = new float[9];

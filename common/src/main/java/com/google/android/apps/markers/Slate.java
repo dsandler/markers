@@ -72,7 +72,11 @@ public class Slate extends View {
     public static final int SHAPE_FOUNTAIN_PEN = 4;
 
     public static final boolean DEBUG_SHOW_TOOL_TYPE = true;
-    public static final boolean STYLUS_BUTTON_ERASER = true;
+
+    public static final boolean STYLUS_BUTTON2_ERASER = false;
+    public static final boolean STYLUS_BUTTON2_HAND   = true;
+    public static final boolean STYLUS_BUTTON3_UNDO   = false;
+    public static final boolean STYLUS_BUTTON3_ERASER = true;
 
     private float mPressureExponent = 2.0f;
 
@@ -112,10 +116,20 @@ public class Slate extends View {
     private int mPenColor, mSaveColor;
     private int mLastButtons;
     private int mToolsInUse;
+    private ZoomController mZoomController;
+    private int mButtons;
 
     public interface SlateListener {
         void strokeStarted();
         void strokeEnded();
+    }
+
+    public interface ZoomController {
+        void startZoom();
+        void startTemporaryZoom(MotionEvent event);
+        void stopZoom();
+        boolean isZooming();
+        boolean onZoomTouchEvent(MotionEvent event);
     }
 
     private class MarkersPlotter implements SpotFilter.Plotter {
@@ -504,6 +518,10 @@ public class Slate extends View {
     }
 
     public boolean isEmpty() { return mEmpty; }
+    
+    public void setZoomController(ZoomController zc) {
+        mZoomController = zc;
+    }
 
     public void resetZoom() {
         mPanX = mPanY = 0;
@@ -860,6 +878,12 @@ public class Slate extends View {
                 sb.append("MOUSE ");
             if ((mToolsInUse & (1<<MotionEvent.TOOL_TYPE_ERASER)) != 0)
                 sb.append("ERASER ");
+            if ((mButtons & MotionEvent.BUTTON_PRIMARY) != 0)
+                sb.append("BUTTON1 ");
+            if ((mButtons & MotionEvent.BUTTON_SECONDARY) != 0)
+                sb.append("BUTTON2 ");
+            if ((mButtons & MotionEvent.BUTTON_TERTIARY) != 0)
+                sb.append("BUTTON3 ");
             if (sb.length() > 0) {
                 sb.insert(0, "[ ");
                 sb.append("]");
@@ -941,47 +965,86 @@ public class Slate extends View {
     @SuppressLint("NewApi")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        final int action = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
+        int action = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
                 ? event.getActionMasked()
                 : event.getAction();
         int N = event.getHistorySize();
         int P = event.getPointerCount();
         long time = event.getEventTime();
+        mButtons = event.getButtonState();
 
         mEmpty = false;
 
-        // starting a new touch? commit the previous state of the canvas
-        if (action == MotionEvent.ACTION_DOWN) {
-            commitStroke();
-        }
-
-        if (mZoomMode) {
-            return false;
-        }
-
-        final int buttons = event.getButtonState();
-        Log.v(TAG, String.format("buttons=0x%08x", buttons));
-        if (STYLUS_BUTTON_ERASER) {
-            final int firstButton = (buttons & MotionEvent.BUTTON_SECONDARY);
-            if (firstButton != (mLastButtons & MotionEvent.BUTTON_SECONDARY)) {
-                if (firstButton != 0) {
-                    mSaveColor = mPenColor;
-                    setPenColor(0);
-                } else {
-                    setPenColor(mSaveColor);
+        if (DEBUG_SHOW_TOOL_TYPE) {
+            mToolsInUse = 0;
+            if (action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) {
+                for (int j = 0; j < P; j++) {
+                    final int tool = getToolTypeCompat(event, j);
+                    mToolsInUse |= (1 << tool);
                 }
             }
         }
-        mLastButtons = buttons;
 
-        mToolsInUse = 0;
+        // starting a new touch? commit the previous state of the canvas
+        if (action == MotionEvent.ACTION_DOWN) {
+            mLastButtons = 0;
+            commitStroke();
+        }
+
+        final int diffButtons = (mButtons ^ mLastButtons);
+        if (diffButtons != 0) {
+            Log.v(TAG, String.format("buttons=0x%08x, diff=0x%08x", mButtons, diffButtons));
+        }
+
+        if (mZoomController.isZooming()) {
+            // We're in zoom mode but somehow got the touch event, probably because the user is
+            // in stylus zoom. Hand off the touch event.
+            return mZoomController.onZoomTouchEvent(event);
+        } else if (mZoomMode) {
+            // ok, the zoom was started somewhere else. There's nothing more we can do here.
+            return false;
+        }
+
+        if (0 != (diffButtons & MotionEvent.BUTTON_TERTIARY)) {
+            final boolean down = 0 != (mButtons & MotionEvent.BUTTON_TERTIARY);
+            if (STYLUS_BUTTON3_UNDO && down) {
+                undo();
+                return true;
+            }
+        }
+
+        final int eraserButton =
+                ( STYLUS_BUTTON2_ERASER ? MotionEvent.BUTTON_SECONDARY
+                : STYLUS_BUTTON3_ERASER ? MotionEvent.BUTTON_TERTIARY
+                : 0);
+
+        boolean exitEraser = false;
+        if (0 != (diffButtons & eraserButton)) {
+            if (0 != (mButtons & eraserButton)) {
+                mSaveColor = mPenColor;
+                setPenColor(0);
+            } else {
+                exitEraser = true;
+            }
+        }
+
+        if (STYLUS_BUTTON2_HAND
+                && MotionEvent.BUTTON_SECONDARY == (diffButtons & MotionEvent.BUTTON_SECONDARY)) {
+            // finish, then discard, current stroke
+            finishAllStrokes(time);
+            mTiledCanvas.discard();
+            mZoomController.startTemporaryZoom(event);
+            return true;
+        }
+
+        mLastButtons = mButtons;
+
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN
         		|| action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             int j = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.FROYO)
                     ? event.getActionIndex()
                     : 0;
             final int tool = getToolTypeCompat(event, j);
-            mToolsInUse |= (1<<tool);
         	mTmpSpot.update(
         	        event.getX(j),
         			event.getY(j),
@@ -1024,7 +1087,6 @@ public class Slate extends View {
             }
             for (int j = 0; j < P; j++) {
                 final int tool = getToolTypeCompat(event, j);
-                mToolsInUse |= (1<<tool);
             	mTmpSpot.update(
             			event.getX(j),
             			event.getY(j),
@@ -1052,13 +1114,21 @@ public class Slate extends View {
         }
         
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-            for (int j = 0; j < P; j++) {
-                mStrokes[event.getPointerId(j)].finish(time);
-            }
-            dbgX = dbgY = -1;
-            mToolsInUse = 0;
+            finishAllStrokes(time);
+        }
+
+        if (exitEraser) {
+            // we have to do this after finishing strokes or else we'll leave spots
+            setPenColor(mSaveColor);
         }
         return true;
+    }
+
+    private void finishAllStrokes(long time) {
+        for (MarkersPlotter stroke : mStrokes) {
+            stroke.finish(time);
+        }
+        dbgX = dbgY = -1;
     }
 
     public static float lerp(float a, float b, float f) {

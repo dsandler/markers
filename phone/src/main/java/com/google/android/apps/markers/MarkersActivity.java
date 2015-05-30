@@ -17,9 +17,6 @@
 package com.google.android.apps.markers;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -35,7 +32,6 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.*;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -79,6 +75,7 @@ public class MarkersActivity extends Activity
     private ToolButton mLastTool, mActiveTool;
     private ToolButton mLastColor, mActiveColor;
     private ToolButton mLastPenType, mActivePenType;
+    private ToolButton.ToolCallback mToolCB;
 
     private View mDebugButton;
     private View mColorsView;
@@ -86,7 +83,7 @@ public class MarkersActivity extends Activity
     private View mToolsView;
     private View mLogoView;
     private View mComboHudView;
-    
+
     private Dialog mMenuDialog;
 
     private SharedPreferences mPrefs;
@@ -173,7 +170,6 @@ public class MarkersActivity extends Activity
         root.addView(mSlate, 0);
         mZoomView = new ZoomTouchView(this);
         mZoomView.setSlate(mSlate);
-        mZoomView.setEnabled(false);
         if (hasAnimations()) {
             mZoomView.setAlpha(0);
         }
@@ -210,11 +206,10 @@ public class MarkersActivity extends Activity
         Typeface light = Typeface.create("sans-serif-light", Typeface.NORMAL);
         title.setTypeface(light);
 
-        final ToolButton.ToolCallback toolCB = new ToolButton.ToolCallback() {
+        mToolCB = new ToolButton.ToolCallback() {
             @Override
             public void setPenMode(ToolButton tool, float min, float max) {
-                mSlate.setZoomMode(false);
-                mZoomView.setEnabled(false);
+                mZoomView.stopZoom();
                 mSlate.setPenSize(min, max);
                 mLastTool = mActiveTool;
                 mActiveTool = tool;
@@ -268,8 +263,7 @@ public class MarkersActivity extends Activity
             }
             @Override
             public void setZoomMode(ToolButton me) {
-                mSlate.setZoomMode(true);
-                mZoomView.setEnabled(true);
+                mZoomView.startZoom();
                 mLastTool = mActiveTool;
                 mActiveTool = me;
                 
@@ -291,46 +285,46 @@ public class MarkersActivity extends Activity
             public void apply(View v) {
                 final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
                 if (swatch != null) {
-                    swatch.setCallback(toolCB);
+                    swatch.setCallback(mToolCB);
                 }
             }
         });
 
         final ToolButton zoomButton = (ToolButton) findViewById(R.id.tool_zoom);
-        zoomButton.setCallback(toolCB);
+        zoomButton.setCallback(mToolCB);
 
         final ToolButton penThinButton = (ToolButton) findViewById(R.id.pen_thin);
-        penThinButton.setCallback(toolCB);
+        penThinButton.setCallback(mToolCB);
 
         final ToolButton penMediumButton = (ToolButton) findViewById(R.id.pen_medium);
         if (penMediumButton != null) {
-            penMediumButton.setCallback(toolCB);
+            penMediumButton.setCallback(mToolCB);
         }
         
         final ToolButton penThickButton = (ToolButton) findViewById(R.id.pen_thick);
-        penThickButton.setCallback(toolCB);
+        penThickButton.setCallback(mToolCB);
 
         final ToolButton fatMarkerButton = (ToolButton) findViewById(R.id.fat_marker);
         if (fatMarkerButton != null) {
-            fatMarkerButton.setCallback(toolCB);
+            fatMarkerButton.setCallback(mToolCB);
         }
 
         final ToolButton typeWhiteboardButton = (ToolButton) findViewById(R.id.whiteboard_marker);
-        typeWhiteboardButton.setCallback(toolCB);
+        typeWhiteboardButton.setCallback(mToolCB);
 
         final ToolButton typeFeltTipButton = (ToolButton) findViewById(R.id.felttip_marker);
         if (typeFeltTipButton != null) {
-            typeFeltTipButton.setCallback(toolCB);
+            typeFeltTipButton.setCallback(mToolCB);
         }
         
         final ToolButton typeAirbrushButton = (ToolButton) findViewById(R.id.airbrush_marker);
         if (typeAirbrushButton != null) {
-            typeAirbrushButton.setCallback(toolCB);
+            typeAirbrushButton.setCallback(mToolCB);
         }
         
         final ToolButton typeFountainPenButton = (ToolButton) findViewById(R.id.fountainpen_marker);
         if (typeFountainPenButton != null) {
-            typeFountainPenButton.setCallback(toolCB);
+            typeFountainPenButton.setCallback(mToolCB);
         }
         
         mLastPenType = mActivePenType = typeWhiteboardButton;
