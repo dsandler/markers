@@ -58,7 +58,7 @@ class PressureCooker {
     }
     
     public void loadStats() {
-        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, 0);
 
         mPressureMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
         mPressureMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
@@ -68,7 +68,7 @@ class PressureCooker {
     }
 
     public void saveStats() {
-        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
+        SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor prefsE = prefs.edit();
         prefsE.putBoolean(PREF_FIRST_RUN, false);
     

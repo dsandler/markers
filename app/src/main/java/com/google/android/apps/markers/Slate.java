@@ -16,8 +16,6 @@
 
 package com.google.android.apps.markers;
 
-import java.util.ArrayList;
-
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -28,18 +26,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Paint.Style;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Region;
-import android.graphics.Region.Op;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -114,7 +108,7 @@ public class Slate extends View {
 
     private boolean mEmpty;
 
-    private Region mDirtyRegion = new Region();
+    private Rect mDirtyRect = new Rect();
 
     private Paint mBlitPaint;
     private Paint mWorkspacePaint;
@@ -810,7 +804,7 @@ public class Slate extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mTiledCanvas != null) {
-            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            final int saveCount = canvas.save();
 
             if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity()) {
                 canvas.translate(mPanX, mPanY);
@@ -822,9 +816,9 @@ public class Slate extends View {
                 canvas.drawRect(-20000, mTiledCanvas.getHeight(), 20000, 20000, mWorkspacePaint);
             }
             
-            if (!mDirtyRegion.isEmpty()) {
-                canvas.clipRegion(mDirtyRegion);
-                mDirtyRegion.setEmpty();
+            if (!mDirtyRect.isEmpty()) {
+                canvas.clipRect(mDirtyRect);
+                mDirtyRect.setEmpty();
             }
             // TODO: tune this threshold based on the device density
             mBlitPaint.setFilterBitmap(getScale(mZoomMatrix) < 3f);
@@ -833,7 +827,7 @@ public class Slate extends View {
                 drawStrokeDebugInfo(canvas);
             }
 
-            canvas.restore();
+            canvas.restoreToCount(saveCount);
             
             if (0 != (mDebugFlags & FLAG_DEBUG_PRESSURE)) {
                 mPressureCooker.drawDebug(canvas);
@@ -1031,7 +1025,7 @@ public class Slate extends View {
         if (INVALIDATE_ALL_THE_THINGS) {
             invalidate();
         } else if (FANCY_INVALIDATES) {
-            mDirtyRegion.union(tmpDirtyRect);
+            mDirtyRect.union(tmpDirtyRect);
             invalidate(); // enqueue invalidation
         } else {
             invalidate(tmpDirtyRect);
