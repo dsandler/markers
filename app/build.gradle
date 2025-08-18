@@ -7,15 +7,15 @@ android {
     compileSdk 36
 
     defaultConfig {
-        def versionMajor = 1
-        def versionMinor = 5
+        def versionMajor = 2
+        def versionMinor = 0
         def versionPatch = 0
-        def versionBuild = 3
-        def versionSuffix = "" // """-BETA"
+        def versionBuild = 0
+        def versionSuffix = "-DEV"
 
         applicationId "org.dsandler.apps.markers"
         minSdk 21
-        targetSdk 34
+        targetSdk 36
         versionCode versionMajor * 1000000 + versionMinor * 10000 + versionPatch * 100 + versionBuild
 
         versionName "${versionMajor}.${versionMinor}.${versionPatch}${versionSuffix} (build ${versionBuild})"

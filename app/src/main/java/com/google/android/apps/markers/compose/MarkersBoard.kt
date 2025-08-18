@@ -26,23 +26,38 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -67,7 +82,18 @@ data class PenState(
 
 class MarkersBoardViewModel() : ViewModel() {
     var penState by mutableStateOf(PenState())
+    var sheetViewModel = SheetViewModel()
     var onClick: Channel<ClickEventType> = Channel(capacity = 1)
+    
+    fun updatePenColor(color: Color) {
+        penState = penState.copy(color = color)
+        sheetViewModel.updatePenColor(color)
+    }
+    
+    fun updatePenWidth(min: Float, max: Float) {
+        penState = penState.copy(widthMin = min, widthMax = max)
+        sheetViewModel.updatePenWidth(min, max)
+    }
 }
 
 enum class ClickEventType {
@@ -80,7 +106,7 @@ enum class ClickEventType {
 fun MarkersScene() {
     val vm = MarkersBoardViewModel()
 
-    MarkersSlateView(viewModel = vm)
+    MarkersBoardView(viewModel = vm)
     Box(modifier = Modifier.fillMaxSize()) {
         ActionPalette(
             viewModel = vm,
@@ -160,7 +186,7 @@ fun MarkersBoardPreview() {
 }
 
 fun saveBitmap(
-    slate: Slate,
+    sheetViewModel: SheetViewModel,
     bitmap: Bitmap,
     filename: String?,
     temporary: Boolean,
@@ -168,70 +194,85 @@ fun saveBitmap(
     share: Boolean,
     clear: Boolean
 ) {
-    MediaClient.saveBitmap(
-        slate.context,
-        bitmap,
-        true,
-        null,
-        -1,
-        -1,
-        filename,
-        temporary,
-        animate,
-        share,
-        clear,
-        slate
-    )
+    // TODO: Implement save functionality for Sheet
+    // For now, we'll use the bitmap passed in
+    // MediaClient.saveBitmap(
+    //     context,
+    //     bitmap,
+    //     true,
+    //     null,
+    //     -1,
+    //     -1,
+    //     filename,
+    //     temporary,
+    //     animate,
+    //     share,
+    //     clear,
+    //     null
+    // )
 }
 
-fun saveDrawing(slate: Slate) {
-    if (slate.isEmpty) return
-    //v.isEnabled = false
+fun saveDrawing(sheetViewModel: SheetViewModel) {
+    val bitmap = sheetViewModel.getBitmap()
+    if (bitmap == null) return
+    
     val filename = MarkersUtils.createDrawingFilename()
-    val localBits: Bitmap = slate.copyBitmap(true)
-    saveBitmap(slate, localBits, filename, false, false, false, false)
-    Toast.makeText(slate.context, "Drawing saved: $filename", Toast.LENGTH_SHORT).show()
-    //v.isEnabled = true
+    saveBitmap(sheetViewModel, bitmap, filename, false, false, false, false)
+    // Toast.makeText(context, "Drawing saved: $filename", Toast.LENGTH_SHORT).show()
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
+fun MarkersBoardView(viewModel: MarkersBoardViewModel) {
     val scope = rememberCoroutineScope()
-    AndroidView(
-        modifier = Modifier
-//            .graphicsLayer()
-            .fillMaxSize()
-            .background(Color.Red),
-        factory = { context ->
-            Slate(context).also { view ->
-                scope.launch {
-                    for (event in viewModel.onClick) {
-                        when (event) {
-                            ClickEventType.CLEAR -> view.clear()
-                            ClickEventType.SAVE -> saveDrawing(view)
-                        }
-                    }
-                }
-                view.background = context.getDrawable(R.drawable.transparent)
-                if (DEBUG) {
-                    view.setBackgroundColor(android.graphics.Color.RED)
-                    view.setDrawingBackground(android.graphics.Color.YELLOW)
-                    view.addOnAttachStateChangeListener(
-                        object : OnAttachStateChangeListener {
-                            override fun onViewAttachedToWindow(v: View) {
-                                view.debugFlags = Slate.FLAG_DEBUG_EVERYTHING
-                            }
 
-                            override fun onViewDetachedFromWindow(v: View) {
-                            }
-                        })
-                }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var rotation by remember { mutableFloatStateOf(0f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    val state = rememberTransformableState { zoomChange, offsetChange, rotationChange ->
+        scale *= zoomChange
+        rotation += rotationChange
+        offset += offsetChange
+    }
+
+    viewModel.sheetViewModel.initializeCanvas()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Cyan)
+            .padding(16.dp)
+            .pointerInteropFilter {
+                Log.v("MarkersBoard", "pointerInteropFilter: peeking at event: $it")
+                false
             }
-        },
-        update = { view ->
-            view.setPenColor(viewModel.penState.color.toArgb())
-            view.setPenSize(viewModel.penState.widthMin, viewModel.penState.widthMax)
-        },
-    )
+            //.transformable(state = state)
+    ) {
+        Sheet(
+            viewModel = viewModel.sheetViewModel,
+            modifier = Modifier
+                .aspectRatio(1f)
+                .fillMaxSize()
+                .hyperBorder()
+                .align(Alignment.Center)
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y,
+                    rotationZ = rotation
+                ),
+        )
+    }
+    
+    // Handle click events
+    scope.launch {
+        for (event in viewModel.onClick) {
+            when (event) {
+                ClickEventType.CLEAR -> viewModel.sheetViewModel.clear()
+                ClickEventType.SAVE -> saveDrawing(viewModel.sheetViewModel)
+            }
+        }
+    }
 }
 

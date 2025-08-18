@@ -129,9 +129,7 @@ fun PenSizeButton(
     SmallButton(
         modifier = m,
         onClick = {
-            viewModel.penState = viewModel.penState.copy(
-                widthMin = widthMin,
-                widthMax = widthMax)
+            viewModel.updatePenWidth(widthMin, widthMax)
         }
     )
 }
@@ -169,7 +167,7 @@ fun ColorSwatch(
         height = height,
         width = width,
         onClick = {
-            viewModel.penState = viewModel.penState.copy(color = color)
+            viewModel.updatePenColor(color)
         }
     )
 }
